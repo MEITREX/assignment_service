@@ -1,0 +1,139 @@
+"""
+An assignment is an external source of tasks, which can be imported. This includes exercise sheets and physical tests.
+"""
+interface Assignment {
+    """
+    Identifier of the assignment, same as the identifier of the assessment.
+    """
+    assessmentId: UUID!
+
+    """
+    Id of the course this assignment belongs to.
+    """
+    courseId: UUID!
+
+    """
+    Number of credits required to pass the assignment.
+    """
+    requiredCredits: Float!
+
+    """
+    Type of the assignment, e.g. exercise sheet or physical test.
+    """
+    assignmentType: AssignmentType!
+
+    """
+    Description of the assignment (optional).
+    """
+    description: String
+}
+
+"""
+An exercise sheet is a collection of exercises done at home or in tutorials at university. They are graded by tutors.
+"""
+type ExerciseSheet implements Assignment {
+    """
+    List of exercises making up the exercise sheet.
+    """
+    exercises: [Exercise!]!
+
+    """
+    The date at which the exercise sheet had to be handed in.
+    """
+    date: DateTime! # TODO maybe optional?
+
+    # inherited from Assignment
+    """
+    Identifier of the assignment, same as the identifier of the assessment.
+    """
+    assessmentId: UUID!
+
+    """
+    Id of the course this assignment belongs to.
+    """
+    courseId: UUID!
+
+    """
+    Number of credits required to pass the assignment.
+    """
+    requiredCredits: Float!
+
+    """
+    Type of the assignment, e.g. exercise sheet or physical test.
+    """
+    assignmentType: AssignmentType!
+
+    """
+    Description of the assignment (optional).
+    """
+    description: String
+}
+
+
+type Exercise {
+    """
+    Unique identifier of the exercise and the id of the corresponding item
+    """
+    itemId: UUID!
+
+    """
+    The amount of credits that can be earned on this exercise including all sub-exercises.
+    """
+    totalExerciseCredits: Float!
+
+    """
+    The number of the exercise on the exercise sheet, may be something such as 2biii (optional).
+    """
+    number: String
+
+    """
+    Feedback given by a tutor on the exercise (optional).
+    """
+    tutorFeedback: String # TODO should this be SlateJS JSON?
+
+}
+
+"""
+A physical test might be a written exam or an online quiz. They are not split up into single exercises.
+"""
+type PhysicalTest {
+    """
+    The time and date at which the test took place.
+    """
+    date: DateTime!
+
+    # inherited from Assignment
+    """
+    Identifier of the assignment, same as the identifier of the assessment.
+    """
+    assessmentId: UUID!
+
+    """
+    Id of the course this assignment belongs to.
+    """
+    courseId: UUID!
+
+    """
+    Number of credits required to pass the assignment.
+    """
+    requiredCredits: Float!
+
+    """
+    Type of the assignment, e.g. exercise sheet or physical test.
+    """
+    assignmentType: AssignmentType!
+
+    """
+    Description of the assignment (optional).
+    """
+    description: String
+}
+
+"""
+The type of assignment.
+"""
+enum AssignmentType {
+    EXERCISE_SHEET
+    PHYSICAL_TEST
+    # add more types here
+}
