@@ -1,4 +1,4 @@
-rootProject.name = 'template'
+rootProject.name = 'assignment_service'
 
 sourceControl {
     gitRepository(uri('https://github.com/MEITREX/common')) {
