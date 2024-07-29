@@ -13,12 +13,12 @@ type Assignment {
     courseId: UUID!
 
     """
-    List of exercises making up the exercise sheet.
+    List of exercises making up the assignment.
     """
     exercises: [Exercise!]!
 
     """
-    The date at which the exercise sheet had to be handed in (optional).
+    The date at which the assignment had to be handed in (optional).
     """
     date: DateTime
 
