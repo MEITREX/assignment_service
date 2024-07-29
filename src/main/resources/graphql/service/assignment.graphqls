@@ -1,7 +1,7 @@
 """
 An assignment is an external source of tasks, which can be imported. This includes exercise sheets and physical tests.
 """
-interface Assignment {
+type Assignment {
     """
     Identifier of the assignment, same as the identifier of the assessment.
     """
@@ -12,46 +12,15 @@ interface Assignment {
     """
     courseId: UUID!
 
-    """
-    Number of credits required to pass the assignment.
-    """
-    requiredCredits: Float!
-
-    """
-    Type of the assignment, e.g. exercise sheet or physical test.
-    """
-    assignmentType: AssignmentType!
-
-    """
-    Description of the assignment (optional).
-    """
-    description: String
-}
-
-"""
-An exercise sheet is a collection of exercises done at home or in tutorials at university. They are graded by tutors.
-"""
-type ExerciseSheet implements Assignment {
     """
     List of exercises making up the exercise sheet.
     """
     exercises: [Exercise!]!
 
     """
-    The date at which the exercise sheet had to be handed in.
+    The date at which the exercise sheet had to be handed in (optional).
     """
-    date: DateTime! # TODO maybe optional?
-
-    # inherited from Assignment
-    """
-    Identifier of the assignment, same as the identifier of the assessment.
-    """
-    assessmentId: UUID!
-
-    """
-    Id of the course this assignment belongs to.
-    """
-    courseId: UUID!
+    date: DateTime
 
     """
     Number of credits required to pass the assignment.
@@ -82,7 +51,12 @@ type Exercise {
     totalExerciseCredits: Float!
 
     """
-    The number of the exercise on the exercise sheet, may be something such as 2biii (optional).
+    Sub-exercises making up the exercise, i.e. parts a),b),c),...
+    """
+    subexercises: [Subexercise!]!
+
+    """
+    The number of the exercise on the exercise sheet, may be something such as 2 (optional).
     """
     number: String
 
@@ -93,40 +67,27 @@ type Exercise {
 
 }
 
-"""
-A physical test might be a written exam or an online quiz. They are not split up into single exercises.
-"""
-type PhysicalTest {
+type Subexercise {
     """
-    The time and date at which the test took place.
+    Unique identifier of the exercise and the id of the corresponding item
     """
-    date: DateTime!
-
-    # inherited from Assignment
-    """
-    Identifier of the assignment, same as the identifier of the assessment.
-    """
-    assessmentId: UUID!
+    itemId: UUID!
 
     """
-    Id of the course this assignment belongs to.
+    The amount of credits that can be earned on this sub-exercise.
     """
-    courseId: UUID!
+    totalExerciseCredits: Float!
 
     """
-    Number of credits required to pass the assignment.
+    The number of the exercise on the exercise sheet, may be something such as 2b (optional).
     """
-    requiredCredits: Float!
+    number: String
 
     """
-    Type of the assignment, e.g. exercise sheet or physical test.
+    Feedback given by a tutor on the exercise (optional).
     """
-    assignmentType: AssignmentType!
+    tutorFeedback: String # TODO should this be SlateJS JSON?
 
-    """
-    Description of the assignment (optional).
-    """
-    description: String
 }
 
 """
