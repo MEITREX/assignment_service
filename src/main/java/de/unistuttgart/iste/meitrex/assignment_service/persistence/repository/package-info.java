@@ -7,4 +7,4 @@
  * For more information, see <a href=https://docs.spring.io/spring-data/data-commons/docs/1.6.1.RELEASE/reference/html/repositories.html>this tutorial</a>
  * or <a href=https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#repositories>the official documentation</a>.
  */
-package de.unistuttgart.iste.meitrex.template.persistence.repository;
+package de.unistuttgart.iste.meitrex.assignment_service.persistence.repository;

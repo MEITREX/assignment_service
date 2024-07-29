@@ -1,4 +1,4 @@
-package de.unistuttgart.iste.meitrex.template.config;
+package de.unistuttgart.iste.meitrex.assignment_service.config;
 
 import graphql.scalars.ExtendedScalars;
 import graphql.validation.rules.OnValidationErrorStrategy;

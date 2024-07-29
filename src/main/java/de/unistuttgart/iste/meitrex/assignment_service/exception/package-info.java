@@ -3,4 +3,4 @@
  * More info about exception handling with GraphQL can be found here:
  * https://www.baeldung.com/spring-graphql-error-handling
  */
-package de.unistuttgart.iste.meitrex.template.exception;
+package de.unistuttgart.iste.meitrex.assignment_service.exception;

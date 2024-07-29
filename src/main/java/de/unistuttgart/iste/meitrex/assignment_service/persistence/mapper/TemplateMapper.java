@@ -1,7 +1,7 @@
-package de.unistuttgart.iste.meitrex.template.persistence.mapper;
+package de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper;
 
 import de.unistuttgart.iste.meitrex.generated.dto.Template;
-import de.unistuttgart.iste.meitrex.template.persistence.entity.TemplateEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.TemplateEntity;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;

@@ -10,4 +10,4 @@
  * To avoid having to implement getters, setters, builders, etc. we use <a href=https://projectlombok.org/>Lombok</a>.
  * The Lombok annotations (e.g. {@code @Data}) should be used in the entities.
  */
-package de.unistuttgart.iste.meitrex.template.persistence.entity;
+package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity;

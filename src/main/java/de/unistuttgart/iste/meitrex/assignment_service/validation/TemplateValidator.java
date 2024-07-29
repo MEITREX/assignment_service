@@ -1,4 +1,4 @@
-package de.unistuttgart.iste.meitrex.template.validation;
+package de.unistuttgart.iste.meitrex.assignment_service.validation;
 
 import de.unistuttgart.iste.meitrex.generated.dto.Template;
 import org.springframework.stereotype.Component;

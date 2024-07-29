@@ -1,6 +1,6 @@
-package de.unistuttgart.iste.meitrex.template.persistence.repository;
+package de.unistuttgart.iste.meitrex.assignment_service.persistence.repository;
 
-import de.unistuttgart.iste.meitrex.template.persistence.entity.TemplateEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.TemplateEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

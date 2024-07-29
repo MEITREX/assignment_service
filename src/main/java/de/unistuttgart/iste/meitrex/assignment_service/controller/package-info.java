@@ -10,4 +10,4 @@
  * An example of our dummy backend would be <a href=https://github.com/IT-REX-Platform/dummy-backend/blob/master/api_gateway_service/src/main/java/de/unistuttgart/iste/meitrex/apigateway/course/CourseController.java>
  * this controller</a>.
  */
-package de.unistuttgart.iste.meitrex.template.controller;
+package de.unistuttgart.iste.meitrex.assignment_service.controller;

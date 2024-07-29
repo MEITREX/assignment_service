@@ -1,9 +1,9 @@
-package de.unistuttgart.iste.meitrex.template.service;
+package de.unistuttgart.iste.meitrex.assignment_service.service;
 
 import de.unistuttgart.iste.meitrex.generated.dto.Template;
-import de.unistuttgart.iste.meitrex.template.persistence.entity.TemplateEntity;
-import de.unistuttgart.iste.meitrex.template.persistence.mapper.TemplateMapper;
-import de.unistuttgart.iste.meitrex.template.persistence.repository.TemplateRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.TemplateEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.TemplateMapper;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.TemplateRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
