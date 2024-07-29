@@ -115,22 +115,22 @@ If these directives are not sufficient, the validation logic can also be placed 
 Follow the guide in the wiki: https://github.com/MEITREX/wiki/blob/main/dev-manuals/backend/new-service.md
 
 Addtionally, after cloning the repository, you need to do the following steps:
-- [ ] Setup the gradle files correctly. This means
-  - [ ] Change the project name in the `settings.gradle` file
+- [x] Setup the gradle files correctly. This means
+  - [x] Change the project name in the `settings.gradle` file
   - [ ] Change the package name in the `build.gradle` file (there is a TODO comment)
-  - [ ] Change the sonar project key in the `build.gradle` file (should be MEITREX_repository_name)
-  - [ ] Add/Remove dependencies in the `build.gradle` file
-- [ ] Rename the package in the `src/main/java` folder to  a more suitable name (should be the same as the package name in the `build.gradle` file)
+  - [x] Change the sonar project key in the `build.gradle` file (should be MEITREX_repository_name)
+  - [x] Add/Remove dependencies in the `build.gradle` file
+- [x] Rename the package in the `src/main/java` folder to  a more suitable name (should be the same as the package name in the `build.gradle` file)
 - [ ] Remove the package-info.java files in the `src/main/java` folder (or update with the microservice specific information)
-- [ ] Update the application.properties file in the `src/main/resources` folder (check the TODOS in the file)
-- [ ] Change the ports and name of the database in the docker-compose.yml (see wiki on how to)
-- [ ] Define the GraphQL schema in the `src/main/resources/schema.graphqls` file
+- [x] Update the application.properties file in the `src/main/resources` folder (check the TODOS in the file)
+- [x] Change the ports and name of the database in the docker-compose.yml (see wiki on how to)
+- [x] Define the GraphQL schema in the `src/main/resources/schema.graphqls` file
 <!-- TODO there probably more TODOs -->
 
 
 After creating a new service you need to do the following:
-- [ ] Add the repository to sonarcloud, follow the instructions for extra configuration, unselect automatic analysis and choose github actions, only the first step needs to be completed
-- [ ] Add SONAR_TOKEN to the service repository secrets on Github (this requires you to have admin permissions on sonarcloud) 
+- [x] Add the repository to sonarcloud, follow the instructions for extra configuration, unselect automatic analysis and choose github actions, only the first step needs to be completed
+- [x] Add SONAR_TOKEN to the service repository secrets on Github (this requires you to have admin permissions on sonarcloud) 
 
 ### Pull new changes from this template
 
