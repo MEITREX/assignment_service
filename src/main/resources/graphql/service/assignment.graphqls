@@ -23,9 +23,9 @@ type Assignment {
     date: DateTime
 
     """
-    Number of credits required to pass the assignment.
+    Number of total credits in the assignment.
     """
-    requiredCredits: Float!
+    totalCredits: Float!
 
     """
     Type of the assignment, e.g. exercise sheet or physical test.
