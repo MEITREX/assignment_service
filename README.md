@@ -37,7 +37,7 @@ This package contains the GraphQL controllers (and other types of controllers if
 In some services, there is also a class called SubscriptionController which handles all dapr event subscriptions.
 
 More information can be found in
-the [Controller package](src/main/java/de/unistuttgart/iste/meitrex/template/controller/package-info.java).
+the [Controller package](src/main/java/de/unistuttgart/iste/meitrex/assignment_service/controller/package-info.java).
 
 ### Dapr package
 
@@ -64,7 +64,7 @@ The DTOs are used to transfer data between the GraphQL controller and the servic
 This package is used for exception handling. Note that with GraphQL, the exceptions are not thrown directly, but are wrapped in a `GraphQLException`, which is different that from the usual Spring Boot approach.
 
 More information can be found in
-the [Exception package](src/main/java/de/unistuttgart/iste/meitrex/template/exception/package-info.java).
+the [Exception package](src/main/java/de/unistuttgart/iste/meitrex/assignment_service/exception/package-info.java).
 
 ### Persistence package
 
@@ -87,8 +87,8 @@ The 'mapper' package is responsible for the mapping logic between the database e
 This structure helps organize the database-related components of the project, making it easier to manage and maintain.
 
 More information can be found in
-the [Entity package](src/main/java/de/unistuttgart/iste/meitrex/template/persistence/entity/package-info.java) and
-the [Repository package](src/main/java/de/unistuttgart/iste/meitrex/template/persistence/repository/package-info.java).
+the [Entity package](src/main/java/de/unistuttgart/iste/meitrex/assignment_service/persistence/entity/package-info.java) and
+the [Repository package](src/main/java/de/unistuttgart/iste/meitrex/assignment_service/persistence/repository/package-info.java).
 
 ### Service package
 
@@ -97,7 +97,7 @@ the [Repository package](src/main/java/de/unistuttgart/iste/meitrex/template/per
 This package contains all classes that are used to handle the business logic of the microservice. Services are annotated with the `@Service` annotation. Services contain only business logic and delegate the data access to the persistence layer (repositories). 
 
 More information can be found in
-the [Service package](src/main/java/de/unistuttgart/iste/meitrex/template/service/package-info.java).
+the [Service package](src/main/java/de/unistuttgart/iste/meitrex/assignment_service/service/package-info.java).
 
 ### Validation package
 
@@ -115,22 +115,22 @@ If these directives are not sufficient, the validation logic can also be placed 
 Follow the guide in the wiki: https://github.com/MEITREX/wiki/blob/main/dev-manuals/backend/new-service.md
 
 Addtionally, after cloning the repository, you need to do the following steps:
-- [ ] Setup the gradle files correctly. This means
-  - [ ] Change the project name in the `settings.gradle` file
+- [x] Setup the gradle files correctly. This means
+  - [x] Change the project name in the `settings.gradle` file
   - [ ] Change the package name in the `build.gradle` file (there is a TODO comment)
-  - [ ] Change the sonar project key in the `build.gradle` file (should be MEITREX_repository_name)
-  - [ ] Add/Remove dependencies in the `build.gradle` file
-- [ ] Rename the package in the `src/main/java` folder to  a more suitable name (should be the same as the package name in the `build.gradle` file)
+  - [x] Change the sonar project key in the `build.gradle` file (should be MEITREX_repository_name)
+  - [x] Add/Remove dependencies in the `build.gradle` file
+- [x] Rename the package in the `src/main/java` folder to  a more suitable name (should be the same as the package name in the `build.gradle` file)
 - [ ] Remove the package-info.java files in the `src/main/java` folder (or update with the microservice specific information)
-- [ ] Update the application.properties file in the `src/main/resources` folder (check the TODOS in the file)
-- [ ] Change the ports and name of the database in the docker-compose.yml (see wiki on how to)
-- [ ] Define the GraphQL schema in the `src/main/resources/schema.graphqls` file
+- [x] Update the application.properties file in the `src/main/resources` folder (check the TODOS in the file)
+- [x] Change the ports and name of the database in the docker-compose.yml (see wiki on how to)
+- [x] Define the GraphQL schema in the `src/main/resources/schema.graphqls` file
 <!-- TODO there probably more TODOs -->
 
 
 After creating a new service you need to do the following:
-- [ ] Add the repository to sonarcloud, follow the instructions for extra configuration, unselect automatic analysis and choose github actions, only the first step needs to be completed
-- [ ] Add SONAR_TOKEN to the service repository secrets on Github (this requires you to have admin permissions on sonarcloud) 
+- [x] Add the repository to sonarcloud, follow the instructions for extra configuration, unselect automatic analysis and choose github actions, only the first step needs to be completed
+- [x] Add SONAR_TOKEN to the service repository secrets on Github (this requires you to have admin permissions on sonarcloud) 
 
 ### Pull new changes from this template
 
