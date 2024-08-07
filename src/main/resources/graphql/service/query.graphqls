@@ -1,1 +1,9 @@
-
+type Query {
+    """
+    Get assignment by assessment ID.
+    If any of the assessment IDs are not found, the corresponding assignment will be null.
+    🔒 The user must be enrolled in the course the assignments belong to to access them. Otherwise null is returned for
+    an assignment if the user has no access to it.
+    """
+    findAssignmentsByAssessmentIds(assessmentIds: [UUID!]!): [Assignment]!
+}

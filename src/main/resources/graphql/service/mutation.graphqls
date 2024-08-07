@@ -1,0 +1,219 @@
+"""
+Mutations for the assignment service. Provides mutations for creating, updating, and deleting assignments.
+"""
+type Mutation {
+    """
+    Creates a new assignment. Mutation is only accessible internally within the system by other
+    services and the gateway.
+    ⚠️ This mutation is only accessible internally in the system and allows the caller to create FlashcardSets without
+    any permissions check and should not be called without any validation of the caller's permissions. ⚠️
+    """
+    _internal_noauth_createAssignment(courseId: UUID!, assessmentId: UUID!, input: CreateAssignmentInput!): Assignment!
+
+    """
+    Modify an assignment.
+    🔒 The user must be an admin the course the assignment is in to perform this action.
+    """
+    mutateAssignment(assessmentId: UUID!): AssignmentMutation!
+
+    """
+    Logs that a user's assignment score has been imported, i.e. the user has completed the assignment.
+    🔒 The user must be an admin or tutor in the course the assignment is in to perform this action.
+    """ # TODO keep description up to date throughout development (especially the required roles)
+    logAssignmentCompleted(input: LogAssignmentCompletedInput!): AssignmentCompletedFeedback!
+}
+
+input CreateAssignmentInput {
+    """
+    Number of total credits in the assignment.
+    """
+    totalCredits: Float!
+
+    """
+    List of exercises in this Assignment
+    """
+    exercises: [CreateExerciseInput!]!
+
+    """
+    Type of the assignment, e.g. exercise sheet or physical test.
+    """
+    assignmentType: AssignmentType!
+
+    """
+    The date at which the assignment had to be handed in (optional).
+    """
+    date: DateTime
+
+    """
+    Description of the assignment (optional).
+    """
+    description: String
+}
+
+input CreateExerciseInput {
+    """
+    The amount of credits that can be earned on this exercise including all sub-exercises.
+    """
+    totalExerciseCredits: Float!
+
+    """
+    Sub-exercises making up the exercise, i.e. parts a),b),c),...
+    """
+    subexercises: [CreateSubexerciseInput!]!
+
+    """
+    The number of the exercise on the exercise sheet, may be something such as 2 (optional).
+    """
+    number: String
+}
+
+input CreateSubexerciseInput {
+    """
+    The amount of credits that can be earned on this sub-exercise.
+    """
+    totalExerciseCredits: Float!
+
+    """
+    The number of the exercise on the exercise sheet, may be something such as 2b (optional).
+    """
+    number: String
+}
+
+type AssignmentMutation {
+    """
+    ID of the assignment that is being modified.
+    """
+    assessmentId: UUID!
+
+    """
+    Creates a new exercise. Throws an error if the assignment does not exist.
+    """
+    createExercise(input: CreateExerciseInput!): Exercise!
+
+    """
+    Updates an exercise. Throws an error if the exercise does not exist.
+    """
+    updateExercise(input: UpdateExerciseInput!): Exercise!
+
+    """
+    Deletes the exercise with the specified ID. Throws an error if the exercise does not exist.
+    """
+    deleteExercise(itemId: UUID!): UUID!
+
+    """
+    Creates a new subexercise. Throws an error if the assignment does not exist.
+    """
+    createSubexercise(input: CreateSubexerciseInput!): Subexercise!
+
+    """
+    Updates a subexercise. Throws an error if the subexercise does not exist.
+    """
+    updateSubexercise(input: UpdateSubexerciseInput!): Subexercise!
+
+    """
+    Deletes the subexercise with the specified ID. Throws an error if the subexercise does not exist.
+    """
+    deleteSubexercise(itemId: UUID!): UUID!
+}
+
+input UpdateExerciseInput {
+    """
+    Id of the exercise to update.
+    """
+    itemId: UUID!
+
+    """
+    The amount of credits that can be earned on this exercise including all sub-exercises.
+    """
+    totalExerciseCredits: Float!
+
+    """
+    Sub-exercises making up the exercise, i.e. parts a),b),c),...
+    """
+    subexercises: [CreateSubexerciseInput!]!
+
+    """
+    The number of the exercise on the exercise sheet, may be something such as 2 (optional).
+    """
+    number: String
+
+}
+
+input UpdateSubexerciseInput {
+    """
+    Id of the subexercise to update.
+    """
+    itemId: UUID!
+
+    """
+    The amount of credits that can be earned on this sub-exercise.
+    """
+    totalExerciseCredits: Float!
+
+    """
+    The number of the exercise on the exercise sheet, may be something such as 2b (optional).
+    """
+    number: String
+}
+
+"""
+Feedback data when "logAssignmentCompleted" is called.
+"""
+type AssignmentCompletedFeedback {
+    """
+    Whether the assignment was passed or not.
+    """
+    success: Boolean!
+
+    """
+    The percentage of achieved credits compared to total credits.
+    """
+    correctness: Float!
+}
+
+input LogAssignmentCompletedInput {
+    """
+    ID of the assignment.
+    """
+    assessmentId: UUID!
+
+    """
+    The absolute number of achieved credits.
+    """
+    achievedCredits: Float!
+
+    """
+    List of exercises that were completed in the assignment.
+    """
+    completedExercises: [ExerciseCompletedInput!]!
+}
+
+input ExerciseCompletedInput {
+    """
+    ID of the exercise.
+    """
+    itemId: UUID!
+
+    """
+    The absolute number of achieved credits.
+    """
+    achievedCredits: Float!
+
+    """
+    List of subexercises that were completed in the exercise.
+    """
+    completedSubexercises: [SubexerciseCompletedInput!]!
+
+}
+
+input SubexerciseCompletedInput {
+    """
+    ID of the subexercise.
+    """
+    itemId: UUID!
+
+    """
+    The absolute number of achieved credits.
+    """
+    achievedCredits: Float!
+}
