@@ -4,6 +4,7 @@ import de.unistuttgart.iste.meitrex.generated.dto.Assignment;
 import de.unistuttgart.iste.meitrex.assignment_service.service.AssignmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 
@@ -18,7 +19,7 @@ public class AssignmentController {
     private final AssignmentService assignmentService;
 
     @QueryMapping
-    public List<Assignment> findAssignmentsByAssessmentIds(List<UUID> assessmentIds) {
+    public List<Assignment> findAssignmentsByAssessmentIds(@Argument List<UUID> assessmentIds) {
         return assignmentService.findAssignmentsByAssessmentIds(assessmentIds);
     }
 

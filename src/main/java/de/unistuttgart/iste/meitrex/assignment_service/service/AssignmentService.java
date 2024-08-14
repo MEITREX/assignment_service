@@ -19,17 +19,6 @@ public class AssignmentService {
     private final AssignmentRepository assignmentRepository;
     private final AssignmentMapper assignmentMapper;
 
-
-    /**
-     * Returns all assignments
-     *
-     * @return list of assignments
-     */
-    public List<Assignment> getAllAssignments() {
-        List<AssignmentEntity> assignmentEntities = assignmentRepository.findAll();
-        return assignmentEntities.stream().map(assignmentMapper::assignmentEntityToDto).toList();
-    }
-
     /**
      * Returns all assignments that are linked to the given assessment ids
      *
