@@ -1,12 +1,12 @@
 package de.unistuttgart.iste.meitrex.assignment_service.validation;
 
-import de.unistuttgart.iste.meitrex.generated.dto.Template;
+import de.unistuttgart.iste.meitrex.generated.dto.Assignment;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TemplateValidator {
+public class AssignmentValidator {
 
-    public void validateTemplate(Template template) {
+    public void validateAssignment(Assignment assignment) {
         // add validation logic here
     }
 }
