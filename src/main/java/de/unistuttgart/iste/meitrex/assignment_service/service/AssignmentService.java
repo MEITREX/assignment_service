@@ -8,6 +8,7 @@ import de.unistuttgart.iste.meitrex.generated.dto.*;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -96,4 +97,18 @@ public class AssignmentService {
                 .setSuccess(success)
                 .build();
     }
+
+
+    /**
+     * Returns the assignment with the given id or throws an exception if the assignment does not exist.
+     *
+     * @param assessmentId the id of the assignment
+     * @return the assignment entity
+     * @throws EntityNotFoundException if the assignment does not exist
+     */
+    public AssignmentEntity requireAssignmentExists(final UUID assessmentId) {
+        return assignmentRepository.findById(assessmentId)
+                .orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
+    }
+
 }

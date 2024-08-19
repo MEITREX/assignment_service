@@ -62,9 +62,9 @@ type AssignmentMutation {
 
 input CreateAssignmentInput {
     """
-    Number of total credits in the assignment.
+    Number of total credits in the assignment. (Positive or zero)
     """
-    totalCredits: Float!
+    totalCredits: Float! @PositiveOrZero
 
     """
     List of exercises in this Assignment
@@ -89,9 +89,9 @@ input CreateAssignmentInput {
 
 input CreateExerciseInput {
     """
-    The amount of credits that can be earned on this exercise including all sub-exercises.
+    The amount of credits that can be earned on this exercise including all sub-exercises. (Positive or zero)
     """
-    totalExerciseCredits: Float!
+    totalExerciseCredits: Float! @PositiveOrZero
 
     """
     Sub-exercises making up the exercise, i.e. parts a),b),c),...
@@ -106,9 +106,9 @@ input CreateExerciseInput {
 
 input CreateSubexerciseInput {
     """
-    The amount of credits that can be earned on this sub-exercise.
+    The amount of credits that can be earned on this sub-exercise. (Positive or zero)
     """
-    totalExerciseCredits: Float!
+    totalExerciseCredits: Float! @PositiveOrZero
 
     """
     The number of the exercise on the exercise sheet, may be something such as 2b (optional).
@@ -123,9 +123,9 @@ input UpdateExerciseInput {
     itemId: UUID!
 
     """
-    The amount of credits that can be earned on this exercise including all sub-exercises.
+    The amount of credits that can be earned on this exercise including all sub-exercises. (Positive or zero)
     """
-    totalExerciseCredits: Float!
+    totalExerciseCredits: Float! @PositiveOrZero
 
     """
     Sub-exercises making up the exercise, i.e. parts a),b),c),...
@@ -146,9 +146,9 @@ input UpdateSubexerciseInput {
     itemId: UUID!
 
     """
-    The amount of credits that can be earned on this sub-exercise.
+    The amount of credits that can be earned on this sub-exercise. (Positive or zero)
     """
-    totalExerciseCredits: Float!
+    totalExerciseCredits: Float! @PositiveOrZero
 
     """
     The number of the exercise on the exercise sheet, may be something such as 2b (optional).
