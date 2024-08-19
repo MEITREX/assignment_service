@@ -23,6 +23,43 @@ type Mutation {
     logAssignmentCompleted(input: LogAssignmentCompletedInput!): AssignmentCompletedFeedback!
 }
 
+type AssignmentMutation {
+    """
+    ID of the assignment that is being modified.
+    """
+    assessmentId: UUID!
+
+    """
+    Creates a new exercise. Throws an error if the assignment does not exist.
+    """
+    createExercise(input: CreateExerciseInput!): Exercise!
+
+    """
+    Updates an exercise. Throws an error if the exercise does not exist.
+    """
+    updateExercise(input: UpdateExerciseInput!): Exercise!
+
+    """
+    Deletes the exercise with the specified ID. Throws an error if the exercise does not exist.
+    """
+    deleteExercise(itemId: UUID!): UUID!
+
+    """
+    Creates a new subexercise. Throws an error if the assignment does not exist.
+    """
+    createSubexercise(input: CreateSubexerciseInput!): Subexercise!
+
+    """
+    Updates a subexercise. Throws an error if the subexercise does not exist.
+    """
+    updateSubexercise(input: UpdateSubexerciseInput!): Subexercise!
+
+    """
+    Deletes the subexercise with the specified ID. Throws an error if the subexercise does not exist.
+    """
+    deleteSubexercise(itemId: UUID!): UUID!
+}
+
 input CreateAssignmentInput {
     """
     Number of total credits in the assignment.
@@ -77,43 +114,6 @@ input CreateSubexerciseInput {
     The number of the exercise on the exercise sheet, may be something such as 2b (optional).
     """
     number: String
-}
-
-type AssignmentMutation {
-    """
-    ID of the assignment that is being modified.
-    """
-    assessmentId: UUID!
-
-    """
-    Creates a new exercise. Throws an error if the assignment does not exist.
-    """
-    createExercise(input: CreateExerciseInput!): Exercise!
-
-    """
-    Updates an exercise. Throws an error if the exercise does not exist.
-    """
-    updateExercise(input: UpdateExerciseInput!): Exercise!
-
-    """
-    Deletes the exercise with the specified ID. Throws an error if the exercise does not exist.
-    """
-    deleteExercise(itemId: UUID!): UUID!
-
-    """
-    Creates a new subexercise. Throws an error if the assignment does not exist.
-    """
-    createSubexercise(input: CreateSubexerciseInput!): Subexercise!
-
-    """
-    Updates a subexercise. Throws an error if the subexercise does not exist.
-    """
-    updateSubexercise(input: UpdateSubexerciseInput!): Subexercise!
-
-    """
-    Deletes the subexercise with the specified ID. Throws an error if the subexercise does not exist.
-    """
-    deleteSubexercise(itemId: UUID!): UUID!
 }
 
 input UpdateExerciseInput {
