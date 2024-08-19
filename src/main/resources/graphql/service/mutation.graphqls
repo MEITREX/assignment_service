@@ -18,7 +18,7 @@ type Mutation {
 
     """
     Logs that a user's assignment score has been imported, i.e. the user has completed the assignment.
-    🔒 The user must be an admin or tutor in the course the assignment is in to perform this action.
+    🔒 The user must be a tutor in the course the assignment is in to perform this action.
     """ # TODO keep description up to date throughout development (especially the required roles)
     logAssignmentCompleted(input: LogAssignmentCompletedInput!): AssignmentCompletedFeedback!
 }

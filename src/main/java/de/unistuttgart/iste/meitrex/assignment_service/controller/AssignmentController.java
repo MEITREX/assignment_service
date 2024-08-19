@@ -35,13 +35,13 @@ public class AssignmentController {
     }
 
     @MutationMapping
-    public AssignmentMutation mutateAssignment(@Argument final UUID assessmentId) {
-        return assignmentService.mutateAssignment(assessmentId);
+    public AssignmentMutation mutateAssignment(@Argument final UUID assessmentId, @ContextValue final LoggedInUser currentUser) {
+        return assignmentService.mutateAssignment(assessmentId, currentUser);
     }
 
     @MutationMapping
     public AssignmentCompletedFeedback logAssignmentCompleted(@Argument LogAssignmentCompletedInput input, @ContextValue final LoggedInUser currentUser) {
-        return assignmentService.logAssignmentCompleted(input, currentUser.getId());
+        return assignmentService.logAssignmentCompleted(input, currentUser);
     }
 
     /* Schema Mappings */
