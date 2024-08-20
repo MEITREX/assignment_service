@@ -108,7 +108,7 @@ input CreateSubexerciseInput {
     """
     The amount of credits that can be earned on this sub-exercise. (Positive or zero)
     """
-    totalExerciseCredits: Float! @PositiveOrZero
+    totalSubexerciseCredits: Float! @PositiveOrZero
 
     """
     The number of the exercise on the exercise sheet, may be something such as 2b (optional).
@@ -148,7 +148,7 @@ input UpdateSubexerciseInput {
     """
     The amount of credits that can be earned on this sub-exercise. (Positive or zero)
     """
-    totalExerciseCredits: Float! @PositiveOrZero
+    totalSubexerciseCredits: Float! @PositiveOrZero
 
     """
     The number of the exercise on the exercise sheet, may be something such as 2b (optional).
@@ -203,7 +203,6 @@ input ExerciseCompletedInput {
     List of subexercises that were completed in the exercise.
     """
     completedSubexercises: [SubexerciseCompletedInput!]!
-
 }
 
 input SubexerciseCompletedInput {

@@ -17,7 +17,7 @@ public class SubexerciseEntity implements IWithId<UUID> {
     private UUID itemId;
 
     @Column(nullable = false)
-    private double totalExerciseCredits;
+    private double totalSubexerciseCredits;
 
     @Column(nullable = true)
     private String number;

@@ -76,7 +76,7 @@ type Subexercise {
     """
     The amount of credits that can be earned on this sub-exercise.
     """
-    totalExerciseCredits: Float!
+    totalSubexerciseCredits: Float!
 
     """
     The number of the exercise on the exercise sheet, may be something such as 2b (optional).
