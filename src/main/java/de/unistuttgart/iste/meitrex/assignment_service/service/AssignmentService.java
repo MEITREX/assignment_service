@@ -1,5 +1,6 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service;
 
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.meitrex.common.event.ContentProgressedEvent;
@@ -109,6 +110,20 @@ public class AssignmentService {
     public AssignmentEntity requireAssignmentExists(final UUID assessmentId) {
         return assignmentRepository.findById(assessmentId)
                 .orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
+    }
+
+    public Exercise createExercise(final UUID assessmentId, final CreateExerciseInput createExerciseInput) {
+        assignmentValidator.validateCreateExerciseInput(createExerciseInput);
+
+        ExerciseEntity newExerciseEntity = assignmentMapper.createExerciseInputToEntity(createExerciseInput);
+        AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
+        List<ExerciseEntity> assignmentExercises = assignmentEntity.getExercises();
+
+        newExerciseEntity.setParentAssignment(assignmentEntity);
+        assignmentExercises.add(newExerciseEntity);
+
+        AssignmentEntity savedAssignmentEntity = assignmentRepository.save(assignmentEntity);
+        return null; // TODO return Assignment or Exercise?
     }
 
 }

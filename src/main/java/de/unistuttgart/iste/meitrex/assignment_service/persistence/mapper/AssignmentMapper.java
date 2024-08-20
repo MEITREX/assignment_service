@@ -1,8 +1,11 @@
 package de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper;
 
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.SubexerciseEntity;
 import de.unistuttgart.iste.meitrex.generated.dto.Assignment;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
 import de.unistuttgart.iste.meitrex.generated.dto.CreateAssignmentInput;
+import de.unistuttgart.iste.meitrex.generated.dto.Subexercise;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
@@ -32,7 +35,16 @@ public class AssignmentMapper {
     }
 
     public AssignmentEntity createAssignmentInputToEntity(final CreateAssignmentInput createAssignmentInput) {
-        return modelMapper.map(createAssignmentInput, AssignmentEntity.class);
+        AssignmentEntity mappedAssignmentEntity = modelMapper.map(createAssignmentInput, AssignmentEntity.class);
+
+        for (ExerciseEntity exerciseEntity : mappedAssignmentEntity.getExercises()) {
+            exerciseEntity.setParentAssignment(mappedAssignmentEntity);
+            for (SubexerciseEntity subexerciseEntity : exerciseEntity.getSubexercises()) {
+                subexerciseEntity.setParentExercise(exerciseEntity);
+            }
+        }
+
+        return mappedAssignmentEntity;
     }
 
 }
