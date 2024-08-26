@@ -4,8 +4,11 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.Exerci
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.SubexerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
+import de.unistuttgart.iste.meitrex.common.event.ContentChangeEvent;
 import de.unistuttgart.iste.meitrex.common.event.ContentProgressedEvent;
+import de.unistuttgart.iste.meitrex.common.event.CrudOperation;
 import de.unistuttgart.iste.meitrex.common.event.Response;
+import de.unistuttgart.iste.meitrex.common.exception.IncompleteEventMessageException;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
@@ -216,4 +219,34 @@ public class AssignmentService {
         return null; // TODO return Assignment or Exercise?
     }
 
+
+    /**
+     * removes all assignments when linked Content gets deleted
+     *
+     * @param dto event object containing changes to content
+     */
+    public void deleteAssignmentIfContentIsDeleted(final ContentChangeEvent dto) throws IncompleteEventMessageException {
+
+        // validate event message
+        checkCompletenessOfDto(dto);
+
+        // only consider DELETE Operations
+        if (!dto.getOperation().equals(CrudOperation.DELETE) || dto.getContentIds().isEmpty()) {
+            return;
+        }
+
+        assignmentRepository.deleteAllById(dto.getContentIds());
+    }
+
+    /**
+     * helper function to make sure received event message is complete
+     *
+     * @param dto event message under evaluation
+     * @throws IncompleteEventMessageException if any of the fields are null
+     */
+    private void checkCompletenessOfDto(final ContentChangeEvent dto) throws IncompleteEventMessageException {
+        if (dto.getOperation() == null || dto.getContentIds() == null) {
+            throw new IncompleteEventMessageException(IncompleteEventMessageException.ERROR_INCOMPLETE_MESSAGE);
+        }
+    }
 }
