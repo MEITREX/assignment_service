@@ -12,6 +12,7 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.Assign
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,17 @@ public class AssignmentService {
                 .toList();
     }
 
+    /**
+     * Creates a new assignment
+     *
+     * @param courseId id of the course the assignment is in
+     *                 (must be the same as the course id of the assessment)
+     * @param assessmentId id of the corresponding assessment
+     * @param createAssignmentInput input data for creating the assignment
+     * @return A new assignment
+     * @throws ValidationException if the assignment input is invalid according
+     *                              to {@link AssignmentValidator#validateCreateAssignmentInput(CreateAssignmentInput)}
+     */
     public Assignment createAssignment(final UUID courseId, final UUID assessmentId, final CreateAssignmentInput createAssignmentInput) {
         assignmentValidator.validateCreateAssignmentInput(createAssignmentInput);
 
@@ -55,6 +67,14 @@ public class AssignmentService {
         return assignmentMapper.assignmentEntityToDto(savedAssignmentEntity);
     }
 
+
+    /**
+     * Creates AssignmentMutation and validates admin access to course.
+     *
+     * @param assessmentId id of the assessment being modified
+     * @param currentUser id of the current user
+     * @return an AssignmentMutation containing the assignment's id
+     */
     public AssignmentMutation mutateAssignment(final UUID assessmentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
 
@@ -64,15 +84,32 @@ public class AssignmentService {
         return new AssignmentMutation(assessmentId);
     }
 
+    /**
+     * Validates user access to the course and publishes a user's progress.
+     *
+     * @param input contains achieved credits for assignment, exercises and subexercises
+     * @param currentUser the user that is currently logged in
+     * @return Feedback containing success and correctness data
+     */
     public AssignmentCompletedFeedback logAssignmentCompleted(final LogAssignmentCompletedInput input, final LoggedInUser currentUser) {
         final AssignmentEntity assignmentEntity = this.requireAssignmentExists(input.getAssessmentId());
 
         // TODO adjust required role during further development
         validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.TUTOR, assignmentEntity.getCourseId());
 
+
+        // TODO the current user should not be the user that will be associated with the AssignmentCompletedInput, as the current user will be a tutor not the student
+        // unless a student presses a refresh button, which checks for data in TMS
         return this.publishProgress(input, currentUser.getId());
     }
 
+    /**
+     * Publishes the {@link ContentProgressedEvent} to the dapr pubsub.
+     *
+     * @param input contains achieved credits for assignment, exercises and subexercises
+     * @param userId id of the user who did the assignment
+     * @return Feedback containing success and correctness data
+     */
     protected AssignmentCompletedFeedback publishProgress(final LogAssignmentCompletedInput input, final UUID userId) {
         final double requiredPercentage = 0.5;
         final AssignmentEntity assignmentEntity = requireAssignmentExists(input.getAssessmentId());
