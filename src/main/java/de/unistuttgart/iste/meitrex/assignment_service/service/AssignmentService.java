@@ -97,7 +97,6 @@ public class AssignmentService {
         // TODO adjust required role during further development
         validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.TUTOR, assignmentEntity.getCourseId());
 
-
         // TODO the current user should not be the user that will be associated with the AssignmentCompletedInput, as the current user will be a tutor not the student
         // unless a student presses a refresh button, which checks for data in TMS
         return this.publishProgress(input, currentUser.getId());
@@ -124,7 +123,7 @@ public class AssignmentService {
 
         // create Responses for each exercise and subexercise
         final List<Response> responses = new ArrayList<>();
-        for (ExerciseCompletedInput exerciseCompletedInput: input.getCompletedExercises()) {
+        for (final ExerciseCompletedInput exerciseCompletedInput: input.getCompletedExercises()) {
             final UUID exerciseId = exerciseCompletedInput.getItemId();
             final ExerciseEntity exerciseEntity = findExerciseEntityInAssignmentEntity(exerciseId, assignmentEntity);
             final double totalExerciseCredits = exerciseEntity.getTotalExerciseCredits();
@@ -132,7 +131,7 @@ public class AssignmentService {
             final Response exerciseResponse = new Response(exerciseId, achievedExercisePercentage);
             responses.add(exerciseResponse);
 
-            for (SubexerciseCompletedInput subexerciseCompletedInput: exerciseCompletedInput.getCompletedSubexercises()) {
+            for (final SubexerciseCompletedInput subexerciseCompletedInput: exerciseCompletedInput.getCompletedSubexercises()) {
                 final UUID subexerciseId = subexerciseCompletedInput.getItemId();
                 final SubexerciseEntity subexerciseEntity = findSubexerciseEntityInExerciseEntity(subexerciseId, exerciseEntity);
                 final double totalSubexerciseCredits = subexerciseEntity.getTotalSubexerciseCredits();
@@ -160,7 +159,6 @@ public class AssignmentService {
                 .setSuccess(success)
                 .build();
     }
-
 
     /**
      * Returns the assignment with the given id or throws an exception if the assignment does not exist.
