@@ -85,23 +85,22 @@ public class AssignmentService {
         final boolean success = achievedCredits >= requiredPercentage * totalCredits;
         final double correctness = achievedCredits / totalCredits;
 
-
         // create Responses for each exercise and subexercise
         final List<Response> responses = new ArrayList<>();
         for (ExerciseCompletedInput exerciseCompletedInput: input.getCompletedExercises()) {
             final UUID exerciseId = exerciseCompletedInput.getItemId();
             final ExerciseEntity exerciseEntity = findExerciseEntityInAssignmentEntity(exerciseId, assignmentEntity);
             final double totalExerciseCredits = exerciseEntity.getTotalExerciseCredits();
-            final float achievedExercisePercentage = (float) (exerciseCompletedInput.getAchievedCredits() / totalExerciseCredits);
-            final Response exerciseResponse = new Response(exerciseId, achievedExercisePercentage == 0 ? 1 : achievedExercisePercentage);
+            final float achievedExercisePercentage = totalExerciseCredits == 0 ? 1 : (float) (exerciseCompletedInput.getAchievedCredits() / totalExerciseCredits);
+            final Response exerciseResponse = new Response(exerciseId, achievedExercisePercentage);
             responses.add(exerciseResponse);
 
             for (SubexerciseCompletedInput subexerciseCompletedInput: exerciseCompletedInput.getCompletedSubexercises()) {
                 final UUID subexerciseId = subexerciseCompletedInput.getItemId();
                 final SubexerciseEntity subexerciseEntity = findSubexerciseEntityInExerciseEntity(subexerciseId, exerciseEntity);
                 final double totalSubexerciseCredits = subexerciseEntity.getTotalSubexerciseCredits();
-                final float achievedSubexercisePercentage = (float) (subexerciseCompletedInput.getAchievedCredits() / totalSubexerciseCredits);
-                final Response subexerciseResponse = new Response(subexerciseId, achievedSubexercisePercentage == 0 ? 1 : achievedSubexercisePercentage);
+                final float achievedSubexercisePercentage = totalSubexerciseCredits == 0 ? 1 : (float) (subexerciseCompletedInput.getAchievedCredits() / totalSubexerciseCredits);
+                final Response subexerciseResponse = new Response(subexerciseId, achievedSubexercisePercentage);
                 responses.add(subexerciseResponse);
             }
         }
