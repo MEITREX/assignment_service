@@ -205,10 +205,10 @@ public class AssignmentService {
     public Exercise createExercise(final UUID assessmentId, final CreateExerciseInput createExerciseInput) {
         assignmentValidator.validateCreateExerciseInput(createExerciseInput);
 
-        ExerciseEntity newExerciseEntity = assignmentMapper.createExerciseInputToEntity(createExerciseInput);
         AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
         List<ExerciseEntity> assignmentExercises = assignmentEntity.getExercises();
 
+        ExerciseEntity newExerciseEntity = assignmentMapper.createExerciseInputToEntity(createExerciseInput);
         newExerciseEntity.setParentAssignment(assignmentEntity);
         assignmentExercises.add(newExerciseEntity);
 
