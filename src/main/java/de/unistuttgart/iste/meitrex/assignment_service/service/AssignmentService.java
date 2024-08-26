@@ -1,9 +1,11 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service;
 
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.SubexerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.meitrex.common.event.ContentProgressedEvent;
+import de.unistuttgart.iste.meitrex.common.event.Response;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
@@ -14,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -71,6 +74,7 @@ public class AssignmentService {
     }
 
     protected AssignmentCompletedFeedback publishProgress(final LogAssignmentCompletedInput input, final UUID userId) {
+        final double requiredPercentage = 0.5;
         final AssignmentEntity assignmentEntity = requireAssignmentExists(input.getAssessmentId());
 
         // TODO is "updateExerciseStatistics(input, userId, assignmentEntity)" needed?
@@ -78,8 +82,29 @@ public class AssignmentService {
         final double achievedCredits = input.getAchievedCredits();
         final double totalCredits = assignmentEntity.getTotalCredits();
 
-        final boolean success = achievedCredits >= 0.5 * totalCredits;
+        final boolean success = achievedCredits >= requiredPercentage * totalCredits;
         final double correctness = achievedCredits / totalCredits;
+
+
+        // create Responses for each exercise and subexercise
+        final List<Response> responses = new ArrayList<>();
+        for (ExerciseCompletedInput exerciseCompletedInput: input.getCompletedExercises()) {
+            final UUID exerciseId = exerciseCompletedInput.getItemId();
+            final ExerciseEntity exerciseEntity = findExerciseEntityInAssignmentEntity(exerciseId, assignmentEntity);
+            final double totalExerciseCredits = exerciseEntity.getTotalExerciseCredits();
+            final float achievedExercisePercentage = (float) (exerciseCompletedInput.getAchievedCredits() / totalExerciseCredits);
+            final Response exerciseResponse = new Response(exerciseId, achievedExercisePercentage == 0 ? 1 : achievedExercisePercentage);
+            responses.add(exerciseResponse);
+
+            for (SubexerciseCompletedInput subexerciseCompletedInput: exerciseCompletedInput.getCompletedSubexercises()) {
+                final UUID subexerciseId = subexerciseCompletedInput.getItemId();
+                final SubexerciseEntity subexerciseEntity = findSubexerciseEntityInExerciseEntity(subexerciseId, exerciseEntity);
+                final double totalSubexerciseCredits = subexerciseEntity.getTotalSubexerciseCredits();
+                final float achievedSubexercisePercentage = (float) (subexerciseCompletedInput.getAchievedCredits() / totalSubexerciseCredits);
+                final Response subexerciseResponse = new Response(subexerciseId, achievedSubexercisePercentage == 0 ? 1 : achievedSubexercisePercentage);
+                responses.add(subexerciseResponse);
+            }
+        }
 
         // create new user progress event message
         final ContentProgressedEvent userProgressLogEvent = ContentProgressedEvent.builder()
@@ -89,6 +114,7 @@ public class AssignmentService {
                 .success(success)
                 .timeToComplete(null)
                 .correctness(correctness)
+                .responses(responses)
                 .build();
 
         // publish new user progress event message
@@ -110,6 +136,36 @@ public class AssignmentService {
     public AssignmentEntity requireAssignmentExists(final UUID assessmentId) {
         return assignmentRepository.findById(assessmentId)
                 .orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
+    }
+
+    /**
+     * Find an exercise-entity in an assignment-entity's list of exercises by the given ID.
+     *
+     * @param exerciseId the id of the ExerciseEntity
+     * @param assignmentEntity the AssignmentEntity in which the exercise should be found
+     * @return the ExerciseEntity with the given id
+     * @throws EntityNotFoundException if the exercise isn't found in the assignmentEntity
+     */
+    protected ExerciseEntity findExerciseEntityInAssignmentEntity(final UUID exerciseId, final AssignmentEntity assignmentEntity) {
+        return assignmentEntity.getExercises().stream()
+                .filter(exerciseEntity -> exerciseId.equals(exerciseEntity.getId()))
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Exercise with itemId %s not found in assignmentEntity".formatted(exerciseId)));
+    }
+
+    /**
+     * Find a subexercise-entity in an exercise-entity's list of subexercises by the given ID.
+     *
+     * @param subexerciseId the id of the SubexerciseEntity
+     * @param exerciseEntity the ExerciseEntity in which the subexercise should be found
+     * @return the SubexerciseEntity with the given id
+     * @throws EntityNotFoundException if the subexercise isn't found in the exerciseEntity
+     */
+    protected SubexerciseEntity findSubexerciseEntityInExerciseEntity(final UUID subexerciseId, final ExerciseEntity exerciseEntity) {
+        return exerciseEntity.getSubexercises().stream()
+                .filter(subexerciseEntity -> subexerciseId.equals(subexerciseEntity.getId()))
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Subexercise with itemId %s not found in exerciseEntity".formatted(subexerciseId)));
     }
 
     public Exercise createExercise(final UUID assessmentId, final CreateExerciseInput createExerciseInput) {
