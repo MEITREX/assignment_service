@@ -232,6 +232,15 @@ public class AssignmentService {
         return exerciseId;
     }
 
+    /**
+     * Creates a subexercise and adds it to the given assignment.
+     *
+     * @param assessmentId the id of the assignment
+     * @param createSubexerciseInput input data for creating the subexercise, also contains the id of the parent exercise
+     * @return the new subexercise
+     * @throws ValidationException if the subexercise input is invalid according
+     *                                               to {@link AssignmentValidator#validateCreateSubexerciseInput(CreateSubexerciseInput)}
+     */
     public Subexercise createSubexercise(final UUID assessmentId, final CreateSubexerciseInput createSubexerciseInput) {
         assignmentValidator.validateCreateSubexerciseInput(createSubexerciseInput);
 
@@ -247,6 +256,15 @@ public class AssignmentService {
         return assignmentMapper.subexerciseEntityToDto(subexerciseEntity);
     }
 
+    /**
+     * Updates the subexercise with the given id. Also updates the respective assignment and exercise.
+     *
+     * @param assessmentId the id of the assignment
+     * @param updateSubexerciseInput the data for updating the subexercise, also contains the subexerciseId
+     * @return the updated subexercise
+     * @throws ValidationException ValidationException if the subexercise input is invalid according
+     *                                               to {@link AssignmentValidator#validateUpdateSubexerciseInput(UpdateSubexerciseInput)}
+     */
     public Subexercise updateSubexercise(final UUID assessmentId, final UpdateSubexerciseInput updateSubexerciseInput) {
         assignmentValidator.validateUpdateSubexerciseInput(updateSubexerciseInput);
         SubexerciseEntity newSubexerciseEntity = assignmentMapper.updateSubexerciseInputToEntity(updateSubexerciseInput);
@@ -264,6 +282,15 @@ public class AssignmentService {
         return assignmentMapper.subexerciseEntityToDto(newSubexerciseEntity);
     }
 
+    /**
+     * Deletes the subexercise with the given id and removes it from the assignment.
+     * Publishes an ItemChangeEvent.
+     *
+     * @param assessmentId the id of the assignment the subexercise is in
+     * @param subexerciseId the id of the subexercise
+     * @return the id of the deleted subexercise
+     * @throws EntityNotFoundException if the subexercise can't be found in the assignment
+     */
     public UUID deleteSubexercise(final UUID assessmentId, final UUID subexerciseId) {
         final AssignmentEntity assignmentEntity = requireAssignmentExists(assessmentId);
         SubexerciseEntity subexerciseEntity = this.findSubexerciseEntityInAssignmentEntity(subexerciseId, assignmentEntity);
