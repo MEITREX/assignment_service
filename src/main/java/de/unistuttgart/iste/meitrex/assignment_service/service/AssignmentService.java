@@ -18,6 +18,7 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -237,6 +238,16 @@ public class AssignmentService {
     }
 
 
+    public UUID deleteExercise(final UUID assessmentId, final UUID exerciseId) {
+        final AssignmentEntity assignmentEntity = requireAssignmentExists(assessmentId);
+        if (!assignmentEntity.getExercises().removeIf(exercise -> exercise.getItemId().equals(exerciseId))) {
+            throw new EntityNotFoundException("Exercise with itemId %s not found.".formatted(exerciseId));
+        }
+        assignmentRepository.save(assignmentEntity);
+        publishItemChangeEvent(exerciseId);
+        return exerciseId;
+    }
+
     /**
      * removes all assignments when linked Content gets deleted
      *
@@ -265,5 +276,13 @@ public class AssignmentService {
         if (dto.getOperation() == null || dto.getContentIds() == null) {
             throw new IncompleteEventMessageException(IncompleteEventMessageException.ERROR_INCOMPLETE_MESSAGE);
         }
+    }
+
+    /**
+     * helper function, that creates a ItemChange Event and publishes it, when an exercise was deleted
+     * @param itemId the id of the item
+     */
+    private void publishItemChangeEvent(final UUID itemId) {
+        topicPublisher.notifyItemChanges(itemId, CrudOperation.DELETE);
     }
 }
