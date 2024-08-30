@@ -14,22 +14,25 @@ public class AssignmentMapper {
 
     private final ModelMapper modelMapper;
 
-    public Assignment entityToDto(AssignmentEntity assignmentEntity) {
-        // add specific mapping here if needed
-        return modelMapper.map(assignmentEntity, Assignment.class);
-    }
-
     public Assignment assignmentEntityToDto(AssignmentEntity assignmentEntity) {
-        return entityToDto(assignmentEntity);
-    }
+        Assignment mappedAssignment = modelMapper.map(assignmentEntity, Assignment.class);
 
-    public AssignmentEntity dtoToEntity(Assignment assignment) {
-        // add specific mapping here if needed
-        return modelMapper.map(assignment, AssignmentEntity.class);
+        mappedAssignment.setExercises(assignmentEntity.getExercises().stream().map(this::exerciseEntityToDto).toList());
+
+        return mappedAssignment;
     }
 
     public AssignmentEntity assignmentDtoToEntity(Assignment assignment) {
-        return dtoToEntity(assignment);
+        AssignmentEntity mappedAssignment = modelMapper.map(assignment, AssignmentEntity.class);
+
+        for (final ExerciseEntity exerciseEntity : mappedAssignment.getExercises()) {
+            exerciseEntity.setParentAssignment(mappedAssignment);
+            for (final SubexerciseEntity subexerciseEntity : exerciseEntity.getSubexercises()) {
+                subexerciseEntity.setParentExercise(exerciseEntity);
+            }
+        }
+
+        return mappedAssignment;
     }
 
     public AssignmentEntity createAssignmentInputToEntity(final CreateAssignmentInput createAssignmentInput) {
