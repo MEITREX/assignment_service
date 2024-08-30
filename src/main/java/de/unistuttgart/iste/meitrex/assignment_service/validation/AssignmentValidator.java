@@ -11,18 +11,18 @@ public class AssignmentValidator {
     }
 
     public void validateCreateExerciseInput(final CreateExerciseInput createExerciseInput) {
-
+        // no extra validation needed
     }
 
     public void validateUpdateExerciseInput(final UpdateExerciseInput updateExerciseInput) {
-
+        // no extra validation needed
     }
 
     public void validateCreateSubexerciseInput(final CreateSubexerciseInput createSubexerciseInput) {
-
+        // no extra validation needed
     }
 
     public void validateUpdateSubexerciseInput(final UpdateSubexerciseInput updateSubexerciseInput) {
-
+        // no extra validation needed
     }
 }
