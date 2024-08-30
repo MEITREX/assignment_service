@@ -113,8 +113,9 @@ public class AssignmentService {
      * @return Feedback containing success and correctness data
      */
     protected AssignmentCompletedFeedback publishProgress(final LogAssignmentCompletedInput input, final UUID userId) {
-        final double requiredPercentage = 0.5;
+
         final AssignmentEntity assignmentEntity = requireAssignmentExists(input.getAssessmentId());
+        final double requiredPercentage = assignmentEntity.getRequiredPercentage() == null ? 0.5 : assignmentEntity.getRequiredPercentage();
 
         // TODO is "updateExerciseStatistics(input, userId, assignmentEntity)" needed?
 

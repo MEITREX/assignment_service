@@ -36,6 +36,11 @@ type Assignment {
     Description of the assignment (optional).
     """
     description: String
+
+    """
+    The required percentage to pass the assignment. A value between 0 and 1. Defaults to 0.5. (optional)
+    """
+    requiredPercentage: Float
 }
 
 
