@@ -2,11 +2,8 @@ package de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper;
 
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.SubexerciseEntity;
-import de.unistuttgart.iste.meitrex.generated.dto.Assignment;
+import de.unistuttgart.iste.meitrex.generated.dto.*;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
-import de.unistuttgart.iste.meitrex.generated.dto.CreateAssignmentInput;
-import de.unistuttgart.iste.meitrex.generated.dto.CreateExerciseInput;
-import de.unistuttgart.iste.meitrex.generated.dto.Subexercise;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
@@ -56,6 +53,26 @@ public class AssignmentMapper {
         }
 
         return mappedExerciseEntity;
+    }
+
+    public ExerciseEntity updateExerciseInputToEntity(final UpdateExerciseInput updateExerciseInput) {
+        ExerciseEntity mappedExerciseEntity = modelMapper.map(updateExerciseInput, ExerciseEntity.class);
+
+        for (final SubexerciseEntity subexerciseEntity : mappedExerciseEntity.getSubexercises()) {
+            subexerciseEntity.setParentExercise(mappedExerciseEntity);
+        }
+
+        return mappedExerciseEntity;
+    }
+
+    public Exercise exerciseEntityToDto(final ExerciseEntity exerciseEntity) {
+        Exercise mappedExercise = modelMapper.map(exerciseEntity, Exercise.class);
+        mappedExercise.setSubexercises(exerciseEntity.getSubexercises().stream().map(this::subexerciseEntityToDto).toList());
+        return mappedExercise;
+    }
+
+    public Subexercise subexerciseEntityToDto(final SubexerciseEntity subexerciseEntity) {
+        return modelMapper.map(subexerciseEntity, Subexercise.class);
     }
 
 }

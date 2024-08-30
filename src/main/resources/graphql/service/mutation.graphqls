@@ -94,6 +94,11 @@ input CreateAssignmentInput {
 
 input CreateExerciseInput {
     """
+    the id of the item the exercise belongs to
+    """
+    itemId: UUID!
+
+    """
     The amount of credits that can be earned on this exercise including all sub-exercises. (Positive or zero)
     """
     totalExerciseCredits: Float! @PositiveOrZero
@@ -110,6 +115,11 @@ input CreateExerciseInput {
 }
 
 input CreateSubexerciseInput {
+    """
+    the id of the item the subexercise belongs to
+    """
+    itemId: UUID!
+
     """
     The amount of credits that can be earned on this sub-exercise. (Positive or zero)
     """

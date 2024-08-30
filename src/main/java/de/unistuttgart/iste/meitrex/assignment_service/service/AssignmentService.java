@@ -216,8 +216,24 @@ public class AssignmentService {
         newExerciseEntity.setParentAssignment(assignmentEntity);
         assignmentExercises.add(newExerciseEntity);
 
-        AssignmentEntity savedAssignmentEntity = assignmentRepository.save(assignmentEntity);
-        return null; // TODO return Assignment or Exercise?
+        assignmentRepository.save(assignmentEntity);
+        return assignmentMapper.exerciseEntityToDto(newExerciseEntity);
+    }
+
+    public Exercise updateExercise(final UUID assessmentId, final UpdateExerciseInput updateExerciseInput) {
+        assignmentValidator.validateUpdateExerciseInput(updateExerciseInput);
+
+        AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
+
+        ExerciseEntity oldExerciseEntity = this.findExerciseEntityInAssignmentEntity(updateExerciseInput.getItemId(), assignmentEntity);
+        ExerciseEntity newExerciseEntity = assignmentMapper.updateExerciseInputToEntity(updateExerciseInput);
+        newExerciseEntity.setParentAssignment(assignmentEntity);
+
+        final int exerciseIndex = assignmentEntity.getExercises().indexOf(oldExerciseEntity);
+        assignmentEntity.getExercises().set(exerciseIndex, newExerciseEntity);
+
+        assignmentRepository.save(assignmentEntity);
+        return assignmentMapper.exerciseEntityToDto(newExerciseEntity);
     }
 
 
