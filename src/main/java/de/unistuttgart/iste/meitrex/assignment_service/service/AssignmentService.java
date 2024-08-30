@@ -207,6 +207,15 @@ public class AssignmentService {
                 .orElseThrow(() -> new EntityNotFoundException("Subexercise with itemId %s not found in exerciseEntity".formatted(subexerciseId)));
     }
 
+    /**
+     * Creates an exercise and adds it to the respective assignment.
+     *
+     * @param assessmentId the id of the assignment the exercise should be added to
+     * @param createExerciseInput input data for creating the exercise
+     * @return the new exercise
+     * @throws ValidationException if the exercise input is invalid according
+     *                                    to {@link AssignmentValidator#validateCreateExerciseInput(CreateExerciseInput)}
+     */
     public Exercise createExercise(final UUID assessmentId, final CreateExerciseInput createExerciseInput) {
         assignmentValidator.validateCreateExerciseInput(createExerciseInput);
 
@@ -221,6 +230,16 @@ public class AssignmentService {
         return assignmentMapper.exerciseEntityToDto(newExerciseEntity);
     }
 
+
+    /**
+     * Updates the exercise with the given id. Also updates the respective assignment.
+     *
+     * @param assessmentId the id of the assignment the exercise is in
+     * @param updateExerciseInput input data for updating the exercise, also contains the id
+     * @return the updated exercise
+     * @throws ValidationException if the exercise input is invalid according
+     *                                         to {@link AssignmentValidator#validateUpdateExerciseInput(UpdateExerciseInput)}
+     */
     public Exercise updateExercise(final UUID assessmentId, final UpdateExerciseInput updateExerciseInput) {
         assignmentValidator.validateUpdateExerciseInput(updateExerciseInput);
 
@@ -238,6 +257,15 @@ public class AssignmentService {
     }
 
 
+    /**
+     * Deletes the exercise with the given id and removes it from the assignment.
+     * Publishes an ItemChangeEvent.
+     *
+     * @param assessmentId the id of the assignment the exercise is in
+     * @param exerciseId the id of the exercise
+     * @return the id of the deleted exercise
+     * @throws EntityNotFoundException if the exercise can't be found in the assignment
+     */
     public UUID deleteExercise(final UUID assessmentId, final UUID exerciseId) {
         final AssignmentEntity assignmentEntity = requireAssignmentExists(assessmentId);
         if (!assignmentEntity.getExercises().removeIf(exercise -> exercise.getItemId().equals(exerciseId))) {
