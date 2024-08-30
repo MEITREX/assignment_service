@@ -78,6 +78,7 @@ public class AssignmentService {
      * @param assessmentId id of the assessment being modified
      * @param currentUser id of the current user
      * @return an AssignmentMutation containing the assignment's id
+     * @throws EntityNotFoundException if the assignment does not exist
      */
     public AssignmentMutation mutateAssignment(final UUID assessmentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
@@ -94,6 +95,7 @@ public class AssignmentService {
      * @param input contains achieved credits for assignment, exercises and subexercises
      * @param currentUser the user that is currently logged in
      * @return Feedback containing success and correctness data
+     * @throws EntityNotFoundException if the assignment does not exist
      */
     public AssignmentCompletedFeedback logAssignmentCompleted(final LogAssignmentCompletedInput input, final LoggedInUser currentUser) {
         final AssignmentEntity assignmentEntity = this.requireAssignmentExists(input.getAssessmentId());
@@ -112,6 +114,7 @@ public class AssignmentService {
      * @param input contains achieved credits for assignment, exercises and subexercises
      * @param userId id of the user who did the assignment
      * @return Feedback containing success and correctness data
+     * @throws EntityNotFoundException if the assignment does not exist
      */
     protected AssignmentCompletedFeedback publishProgress(final LogAssignmentCompletedInput input, final UUID userId) {
 
@@ -171,6 +174,7 @@ public class AssignmentService {
      * @param assessmentId the id of the assignment the exercise should be added to
      * @param createExerciseInput input data for creating the exercise
      * @return the new exercise
+     * @throws EntityNotFoundException if the assignment does not exist
      * @throws ValidationException if the exercise input is invalid according
      *                                    to {@link AssignmentValidator#validateCreateExerciseInput(CreateExerciseInput)}
      */
@@ -194,6 +198,7 @@ public class AssignmentService {
      * @param assessmentId the id of the assignment the exercise is in
      * @param updateExerciseInput input data for updating the exercise, also contains the id
      * @return the updated exercise
+     * @throws EntityNotFoundException if the assignment does not exist
      * @throws ValidationException if the exercise input is invalid according
      *                                         to {@link AssignmentValidator#validateUpdateExerciseInput(UpdateExerciseInput)}
      */
@@ -220,6 +225,7 @@ public class AssignmentService {
      * @param assessmentId the id of the assignment the exercise is in
      * @param exerciseId the id of the exercise
      * @return the id of the deleted exercise
+     * @throws EntityNotFoundException if the assignment does not exist
      * @throws EntityNotFoundException if the exercise can't be found in the assignment
      */
     public UUID deleteExercise(final UUID assessmentId, final UUID exerciseId) {
@@ -238,6 +244,7 @@ public class AssignmentService {
      * @param assessmentId the id of the assignment
      * @param createSubexerciseInput input data for creating the subexercise, also contains the id of the parent exercise
      * @return the new subexercise
+     * @throws EntityNotFoundException if the assignment does not exist
      * @throws ValidationException if the subexercise input is invalid according
      *                                               to {@link AssignmentValidator#validateCreateSubexerciseInput(CreateSubexerciseInput)}
      */
@@ -262,6 +269,7 @@ public class AssignmentService {
      * @param assessmentId the id of the assignment
      * @param updateSubexerciseInput the data for updating the subexercise, also contains the subexerciseId
      * @return the updated subexercise
+     * @throws EntityNotFoundException if the assignment does not exist
      * @throws ValidationException ValidationException if the subexercise input is invalid according
      *                                               to {@link AssignmentValidator#validateUpdateSubexerciseInput(UpdateSubexerciseInput)}
      */
@@ -289,6 +297,7 @@ public class AssignmentService {
      * @param assessmentId the id of the assignment the subexercise is in
      * @param subexerciseId the id of the subexercise
      * @return the id of the deleted subexercise
+     * @throws EntityNotFoundException if the assignment does not exist
      * @throws EntityNotFoundException if the subexercise can't be found in the assignment
      */
     public UUID deleteSubexercise(final UUID assessmentId, final UUID subexerciseId) {
