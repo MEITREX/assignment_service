@@ -166,6 +166,116 @@ public class AssignmentService {
     }
 
     /**
+     * Creates an exercise and adds it to the respective assignment.
+     *
+     * @param assessmentId the id of the assignment the exercise should be added to
+     * @param createExerciseInput input data for creating the exercise
+     * @return the new exercise
+     * @throws ValidationException if the exercise input is invalid according
+     *                                    to {@link AssignmentValidator#validateCreateExerciseInput(CreateExerciseInput)}
+     */
+    public Exercise createExercise(final UUID assessmentId, final CreateExerciseInput createExerciseInput) {
+        assignmentValidator.validateCreateExerciseInput(createExerciseInput);
+
+        AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
+        List<ExerciseEntity> assignmentExercises = assignmentEntity.getExercises();
+
+        ExerciseEntity newExerciseEntity = assignmentMapper.createExerciseInputToEntity(createExerciseInput);
+        newExerciseEntity.setParentAssignment(assignmentEntity);
+        assignmentExercises.add(newExerciseEntity);
+
+        assignmentRepository.save(assignmentEntity);
+        return assignmentMapper.exerciseEntityToDto(newExerciseEntity);
+    }
+
+    /**
+     * Updates the exercise with the given id. Also updates the respective assignment.
+     *
+     * @param assessmentId the id of the assignment the exercise is in
+     * @param updateExerciseInput input data for updating the exercise, also contains the id
+     * @return the updated exercise
+     * @throws ValidationException if the exercise input is invalid according
+     *                                         to {@link AssignmentValidator#validateUpdateExerciseInput(UpdateExerciseInput)}
+     */
+    public Exercise updateExercise(final UUID assessmentId, final UpdateExerciseInput updateExerciseInput) {
+        assignmentValidator.validateUpdateExerciseInput(updateExerciseInput);
+
+        AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
+
+        ExerciseEntity oldExerciseEntity = this.findExerciseEntityInAssignmentEntity(updateExerciseInput.getItemId(), assignmentEntity);
+        ExerciseEntity newExerciseEntity = assignmentMapper.updateExerciseInputToEntity(updateExerciseInput);
+        newExerciseEntity.setParentAssignment(assignmentEntity);
+
+        final int exerciseIndex = assignmentEntity.getExercises().indexOf(oldExerciseEntity);
+        assignmentEntity.getExercises().set(exerciseIndex, newExerciseEntity);
+
+        assignmentRepository.save(assignmentEntity);
+        return assignmentMapper.exerciseEntityToDto(newExerciseEntity);
+    }
+
+    /**
+     * Deletes the exercise with the given id and removes it from the assignment.
+     * Publishes an ItemChangeEvent.
+     *
+     * @param assessmentId the id of the assignment the exercise is in
+     * @param exerciseId the id of the exercise
+     * @return the id of the deleted exercise
+     * @throws EntityNotFoundException if the exercise can't be found in the assignment
+     */
+    public UUID deleteExercise(final UUID assessmentId, final UUID exerciseId) {
+        final AssignmentEntity assignmentEntity = requireAssignmentExists(assessmentId);
+        if (!assignmentEntity.getExercises().removeIf(exercise -> exercise.getItemId().equals(exerciseId))) {
+            throw new EntityNotFoundException("Exercise with itemId %s not found.".formatted(exerciseId));
+        }
+        assignmentRepository.save(assignmentEntity);
+        publishItemChangeEvent(exerciseId);
+        return exerciseId;
+    }
+
+    public Subexercise createSubexercise(final UUID assessmentId, final CreateSubexerciseInput createSubexerciseInput) {
+        assignmentValidator.validateCreateSubexerciseInput(createSubexerciseInput);
+
+        AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
+
+        SubexerciseEntity subexerciseEntity = assignmentMapper.createSubexerciseInputToEntity(createSubexerciseInput);
+        ExerciseEntity parentExerciseEntity = findExerciseEntityInAssignmentEntity(createSubexerciseInput.getParentExerciseId(), assignmentEntity);
+        subexerciseEntity.setParentExercise(parentExerciseEntity);
+
+        parentExerciseEntity.getSubexercises().add(subexerciseEntity);
+
+        assignmentRepository.save(assignmentEntity);
+        return assignmentMapper.subexerciseEntityToDto(subexerciseEntity);
+    }
+
+    public Subexercise updateSubexercise(final UUID assessmentId, final UpdateSubexerciseInput updateSubexerciseInput) {
+        assignmentValidator.validateUpdateSubexerciseInput(updateSubexerciseInput);
+        SubexerciseEntity newSubexerciseEntity = assignmentMapper.updateSubexerciseInputToEntity(updateSubexerciseInput);
+
+        UUID subexerciseId = updateSubexerciseInput.getItemId();
+        AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
+        SubexerciseEntity oldSubexerciseEntity = this.findSubexerciseEntityInAssignmentEntity(subexerciseId, assignmentEntity);
+        ExerciseEntity parentExerciseEntity = oldSubexerciseEntity.getParentExercise();
+        newSubexerciseEntity.setParentExercise(parentExerciseEntity);
+
+        final int subexerciseIndex = parentExerciseEntity.getSubexercises().indexOf(oldSubexerciseEntity);
+        parentExerciseEntity.getSubexercises().set(subexerciseIndex, newSubexerciseEntity);
+
+        assignmentRepository.save(assignmentEntity);
+        return assignmentMapper.subexerciseEntityToDto(newSubexerciseEntity);
+    }
+
+    public UUID deleteSubexercise(final UUID assessmentId, final UUID subexerciseId) {
+        final AssignmentEntity assignmentEntity = requireAssignmentExists(assessmentId);
+        SubexerciseEntity subexerciseEntity = this.findSubexerciseEntityInAssignmentEntity(subexerciseId, assignmentEntity);
+        ExerciseEntity parentExerciseEntity = subexerciseEntity.getParentExercise();
+        parentExerciseEntity.getSubexercises().remove(subexerciseEntity);
+
+        assignmentRepository.save(assignmentEntity);
+        publishItemChangeEvent(subexerciseId);
+        return subexerciseId;
+    }
+
+    /**
      * Returns the assignment with the given id or throws an exception if the assignment does not exist.
      *
      * @param assessmentId the id of the assignment
@@ -208,72 +318,22 @@ public class AssignmentService {
     }
 
     /**
-     * Creates an exercise and adds it to the respective assignment.
+     * Find a subexercise-entity that is part of an assignment-entity, meaning the subexercise is part of an exercise which is part of the assignment.
      *
-     * @param assessmentId the id of the assignment the exercise should be added to
-     * @param createExerciseInput input data for creating the exercise
-     * @return the new exercise
-     * @throws ValidationException if the exercise input is invalid according
-     *                                    to {@link AssignmentValidator#validateCreateExerciseInput(CreateExerciseInput)}
+     * @param subexerciseId the id of the SubexerciseEntity
+     * @param assignmentEntity the AssignmentEntity in which the subexercise should be found
+     * @return the SubexerciseEntity with the given id
+     * @throws EntityNotFoundException if the subexercise isn't found in the assignmentEntity
      */
-    public Exercise createExercise(final UUID assessmentId, final CreateExerciseInput createExerciseInput) {
-        assignmentValidator.validateCreateExerciseInput(createExerciseInput);
-
-        AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
-        List<ExerciseEntity> assignmentExercises = assignmentEntity.getExercises();
-
-        ExerciseEntity newExerciseEntity = assignmentMapper.createExerciseInputToEntity(createExerciseInput);
-        newExerciseEntity.setParentAssignment(assignmentEntity);
-        assignmentExercises.add(newExerciseEntity);
-
-        assignmentRepository.save(assignmentEntity);
-        return assignmentMapper.exerciseEntityToDto(newExerciseEntity);
-    }
-
-
-    /**
-     * Updates the exercise with the given id. Also updates the respective assignment.
-     *
-     * @param assessmentId the id of the assignment the exercise is in
-     * @param updateExerciseInput input data for updating the exercise, also contains the id
-     * @return the updated exercise
-     * @throws ValidationException if the exercise input is invalid according
-     *                                         to {@link AssignmentValidator#validateUpdateExerciseInput(UpdateExerciseInput)}
-     */
-    public Exercise updateExercise(final UUID assessmentId, final UpdateExerciseInput updateExerciseInput) {
-        assignmentValidator.validateUpdateExerciseInput(updateExerciseInput);
-
-        AssignmentEntity assignmentEntity = this.requireAssignmentExists(assessmentId);
-
-        ExerciseEntity oldExerciseEntity = this.findExerciseEntityInAssignmentEntity(updateExerciseInput.getItemId(), assignmentEntity);
-        ExerciseEntity newExerciseEntity = assignmentMapper.updateExerciseInputToEntity(updateExerciseInput);
-        newExerciseEntity.setParentAssignment(assignmentEntity);
-
-        final int exerciseIndex = assignmentEntity.getExercises().indexOf(oldExerciseEntity);
-        assignmentEntity.getExercises().set(exerciseIndex, newExerciseEntity);
-
-        assignmentRepository.save(assignmentEntity);
-        return assignmentMapper.exerciseEntityToDto(newExerciseEntity);
-    }
-
-
-    /**
-     * Deletes the exercise with the given id and removes it from the assignment.
-     * Publishes an ItemChangeEvent.
-     *
-     * @param assessmentId the id of the assignment the exercise is in
-     * @param exerciseId the id of the exercise
-     * @return the id of the deleted exercise
-     * @throws EntityNotFoundException if the exercise can't be found in the assignment
-     */
-    public UUID deleteExercise(final UUID assessmentId, final UUID exerciseId) {
-        final AssignmentEntity assignmentEntity = requireAssignmentExists(assessmentId);
-        if (!assignmentEntity.getExercises().removeIf(exercise -> exercise.getItemId().equals(exerciseId))) {
-            throw new EntityNotFoundException("Exercise with itemId %s not found.".formatted(exerciseId));
+    protected SubexerciseEntity findSubexerciseEntityInAssignmentEntity(final UUID subexerciseId, final AssignmentEntity assignmentEntity) {
+        for (final ExerciseEntity exerciseEntity : assignmentEntity.getExercises()) {
+            for (final SubexerciseEntity subexerciseEntity : exerciseEntity.getSubexercises()) {
+                if (subexerciseEntity.getId().equals(subexerciseId)) {
+                    return subexerciseEntity;
+                }
+            }
         }
-        assignmentRepository.save(assignmentEntity);
-        publishItemChangeEvent(exerciseId);
-        return exerciseId;
+        throw new EntityNotFoundException("Subexercise with itemId %s not found in assignment".formatted(subexerciseId));
     }
 
     /**

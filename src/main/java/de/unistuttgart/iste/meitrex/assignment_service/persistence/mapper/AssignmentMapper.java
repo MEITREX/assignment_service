@@ -68,6 +68,16 @@ public class AssignmentMapper {
         return mappedExerciseEntity;
     }
 
+    public SubexerciseEntity createSubexerciseInputToEntity(final CreateSubexerciseInput createSubexerciseInput) {
+        SubexerciseEntity mappedSubexerciseEntity = modelMapper.map(createSubexerciseInput, SubexerciseEntity.class);
+        return mappedSubexerciseEntity;
+    }
+
+    public SubexerciseEntity updateSubexerciseInputToEntity(final UpdateSubexerciseInput updateSubexerciseInput) {
+        SubexerciseEntity mappedSubexerciseEntity = modelMapper.map(updateSubexerciseInput, SubexerciseEntity.class);
+        return mappedSubexerciseEntity;
+    }
+
     public Exercise exerciseEntityToDto(final ExerciseEntity exerciseEntity) {
         Exercise mappedExercise = modelMapper.map(exerciseEntity, Exercise.class);
         mappedExercise.setSubexercises(exerciseEntity.getSubexercises().stream().map(this::subexerciseEntityToDto).toList());

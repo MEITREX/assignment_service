@@ -121,6 +121,11 @@ input CreateSubexerciseInput {
     itemId: UUID!
 
     """
+    the id of the exercise this subexercise belongs to
+    """
+    parentExerciseId: UUID!
+
+    """
     The amount of credits that can be earned on this sub-exercise. (Positive or zero)
     """
     totalSubexerciseCredits: Float! @PositiveOrZero
