@@ -119,8 +119,6 @@ public class MutationCreateExerciseTest {
         assertThat(createdExerciseFromRepo.getSubexercises(), hasSize(2));
         assertThat(createdExerciseFromRepo.getNumber(), is("2"));
 
-        createdExerciseFromRepo.getSubexercises().forEach(subexerciseEntity -> subexerciseEntity.setTutorFeedback(null));
-
         assertThat(createdExerciseFromRepo.getSubexercises(), containsInAnyOrder(
                 SubexerciseEntity.builder().itemId(itemId2).totalSubexerciseCredits(20).number("2a").parentExercise(createdExerciseFromRepo).build(),
                 SubexerciseEntity.builder().itemId(itemId3).totalSubexerciseCredits(5).number("2b").parentExercise(createdExerciseFromRepo).build()
