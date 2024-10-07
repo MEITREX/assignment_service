@@ -3,7 +3,6 @@ package de.unistuttgart.iste.meitrex.assignment_service.api;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.SubexerciseEntity;
 import de.unistuttgart.iste.meitrex.common.testutil.GraphQlApiTest;
 import de.unistuttgart.iste.meitrex.common.testutil.InjectCurrentUserHeader;
-import de.unistuttgart.iste.meitrex.common.testutil.TablesToDelete;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser.UserRoleInCourse;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
