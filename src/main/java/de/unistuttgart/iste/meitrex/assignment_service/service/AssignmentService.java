@@ -187,6 +187,8 @@ public class AssignmentService {
         newExerciseEntity.setParentAssignment(assignmentEntity);
         assignmentExercises.add(newExerciseEntity);
 
+        assignmentEntity.setTotalCredits(assignmentEntity.getTotalCredits() + createExerciseInput.getTotalExerciseCredits());
+
         assignmentRepository.save(assignmentEntity);
         return assignmentMapper.exerciseEntityToDto(newExerciseEntity);
     }
@@ -213,6 +215,8 @@ public class AssignmentService {
         final int exerciseIndex = assignmentEntity.getExercises().indexOf(oldExerciseEntity);
         assignmentEntity.getExercises().set(exerciseIndex, newExerciseEntity);
 
+        assignmentEntity.setTotalCredits(assignmentEntity.getTotalCredits() - oldExerciseEntity.getTotalExerciseCredits() + updateExerciseInput.getTotalExerciseCredits());
+
         assignmentRepository.save(assignmentEntity);
         return assignmentMapper.exerciseEntityToDto(newExerciseEntity);
     }
@@ -229,7 +233,11 @@ public class AssignmentService {
      */
     public UUID deleteExercise(final UUID assessmentId, final UUID exerciseId) {
         final AssignmentEntity assignmentEntity = requireAssignmentExists(assessmentId);
-        if (!assignmentEntity.getExercises().removeIf(exercise -> exercise.getItemId().equals(exerciseId))) {
+        try {
+            final ExerciseEntity oldExerciseEntity = this.findExerciseEntityInAssignmentEntity(exerciseId, assignmentEntity);
+            assignmentEntity.setTotalCredits(assignmentEntity.getTotalCredits() - oldExerciseEntity.getTotalExerciseCredits());
+            assignmentEntity.getExercises().remove(oldExerciseEntity);
+        } catch (Exception e) {
             throw new EntityNotFoundException("Exercise with itemId %s not found.".formatted(exerciseId));
         }
         assignmentRepository.save(assignmentEntity);
@@ -258,6 +266,9 @@ public class AssignmentService {
 
         parentExerciseEntity.getSubexercises().add(subexerciseEntity);
 
+        parentExerciseEntity.setTotalExerciseCredits(parentExerciseEntity.getTotalExerciseCredits() + createSubexerciseInput.getTotalSubexerciseCredits());
+        assignmentEntity.setTotalCredits(assignmentEntity.getTotalCredits() + createSubexerciseInput.getTotalSubexerciseCredits());
+
         assignmentRepository.save(assignmentEntity);
         return assignmentMapper.subexerciseEntityToDto(subexerciseEntity);
     }
@@ -285,6 +296,10 @@ public class AssignmentService {
         final int subexerciseIndex = parentExerciseEntity.getSubexercises().indexOf(oldSubexerciseEntity);
         parentExerciseEntity.getSubexercises().set(subexerciseIndex, newSubexerciseEntity);
 
+        final double creditDifference = updateSubexerciseInput.getTotalSubexerciseCredits() - oldSubexerciseEntity.getTotalSubexerciseCredits();
+        parentExerciseEntity.setTotalExerciseCredits(parentExerciseEntity.getTotalExerciseCredits() + creditDifference);
+        assignmentEntity.setTotalCredits(assignmentEntity.getTotalCredits() + creditDifference);
+
         assignmentRepository.save(assignmentEntity);
         return assignmentMapper.subexerciseEntityToDto(newSubexerciseEntity);
     }
@@ -303,6 +318,11 @@ public class AssignmentService {
         final AssignmentEntity assignmentEntity = requireAssignmentExists(assessmentId);
         SubexerciseEntity subexerciseEntity = this.findSubexerciseEntityInAssignmentEntity(subexerciseId, assignmentEntity);
         ExerciseEntity parentExerciseEntity = subexerciseEntity.getParentExercise();
+
+        final double subexerciseCredits = subexerciseEntity.getTotalSubexerciseCredits();
+        parentExerciseEntity.setTotalExerciseCredits(parentExerciseEntity.getTotalExerciseCredits() - subexerciseCredits);
+        assignmentEntity.setTotalCredits(assignmentEntity.getTotalCredits() - subexerciseCredits);
+
         parentExerciseEntity.getSubexercises().remove(subexerciseEntity);
 
         assignmentRepository.save(assignmentEntity);
