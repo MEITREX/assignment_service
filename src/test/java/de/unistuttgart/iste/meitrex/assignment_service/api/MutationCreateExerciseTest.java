@@ -84,6 +84,7 @@ public class MutationCreateExerciseTest {
                 """;
 
         final UUID assignmentId = assignmentEntity.getId();
+        final double assignmentCredits = assignmentEntity.getTotalCredits();
 
         // Execute the mutation and get Exercise
         final Exercise createdExercise = tester.document(query)
@@ -113,6 +114,7 @@ public class MutationCreateExerciseTest {
         final List<ExerciseEntity> exercisesFromRepo = assignmentFromRepo.getExercises();
         final ExerciseEntity createdExerciseFromRepo = exercisesFromRepo.stream().filter(exercise -> exercise.getId().equals(itemId1)).findFirst().get();
 
+        assertThat(assignmentFromRepo.getTotalCredits(), is(assignmentCredits + 25));
         assertThat(createdExerciseFromRepo.getItemId(), is(itemId1));
         assertThat(createdExerciseFromRepo.getTotalExerciseCredits(), closeTo(25, 0));
         assertThat(createdExerciseFromRepo.getSubexercises(), hasSize(2));
