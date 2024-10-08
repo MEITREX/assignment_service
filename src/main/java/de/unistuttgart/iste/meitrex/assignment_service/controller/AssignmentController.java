@@ -1,5 +1,6 @@
 package de.unistuttgart.iste.meitrex.assignment_service.controller;
 
+import de.unistuttgart.iste.meitrex.common.exception.NoAccessToCourseException;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import de.unistuttgart.iste.meitrex.assignment_service.service.AssignmentService;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Controller;
 import java.util.List;
 import java.util.UUID;
 
+import static de.unistuttgart.iste.meitrex.common.user_handling.UserCourseAccessValidator.validateUserHasAccessToCourse;
+
 @Slf4j
 @Controller
 @RequiredArgsConstructor
@@ -21,8 +24,20 @@ public class AssignmentController {
     /* Query Mappings */
 
     @QueryMapping
-    public List<Assignment> findAssignmentsByAssessmentIds(@Argument List<UUID> assessmentIds) {
-        return assignmentService.findAssignmentsByAssessmentIds(assessmentIds);
+    public List<Assignment> findAssignmentsByAssessmentIds(@Argument List<UUID> assessmentIds, @ContextValue final LoggedInUser currentUser) {
+        return assignmentService.findAssignmentsByAssessmentIds(assessmentIds).stream()
+                .map(assignment -> {
+                    if (assignment == null) {
+                        return null;
+                    }
+                    try {
+                        validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.STUDENT, assignment.getCourseId());
+                        return assignment;
+                    } catch (final NoAccessToCourseException ex) {
+                        return null;
+                    }
+                })
+                .toList();
     }
 
     /* Mutation Mappings */

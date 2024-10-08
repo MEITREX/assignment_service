@@ -15,6 +15,10 @@ public class AssignmentMapper {
     private final ModelMapper modelMapper;
 
     public Assignment assignmentEntityToDto(AssignmentEntity assignmentEntity) {
+        if (assignmentEntity == null) {
+            return null;
+        }
+
         Assignment mappedAssignment = modelMapper.map(assignmentEntity, Assignment.class);
 
         mappedAssignment.setExercises(assignmentEntity.getExercises().stream().map(this::exerciseEntityToDto).toList());
