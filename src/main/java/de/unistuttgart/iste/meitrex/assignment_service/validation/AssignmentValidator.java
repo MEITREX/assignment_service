@@ -55,4 +55,24 @@ public class AssignmentValidator {
     public void validateUpdateSubexerciseInput(final UpdateSubexerciseInput updateSubexerciseInput) {
         // no extra validation needed
     }
+
+    public void validateLogAssignmentCompletedInput(final LogAssignmentCompletedInput input) {
+        final double assignmentCredits = input.getAchievedCredits();
+        double exerciseSum = 0;
+
+        for (final ExerciseCompletedInput exerciseCompletedInput : input.getCompletedExercises()) {
+            double subexerciseSum = 0;
+            double exerciseCredits = exerciseCompletedInput.getAchievedCredits();
+            exerciseSum += exerciseCredits;
+            for (final SubexerciseCompletedInput subexerciseCompletedInput : exerciseCompletedInput.getCompletedSubexercises()) {
+                subexerciseSum += subexerciseCompletedInput.getAchievedCredits();
+            }
+            if (Math.abs(exerciseCredits - subexerciseSum) > EPSILON) {
+                throw new ValidationException("Achieved subexercise credits do not sum up to achieved exercise credits.");
+            }
+        }
+        if (Math.abs(assignmentCredits - exerciseSum) > EPSILON) {
+            throw new ValidationException("Achieved exercise credits do not sum up to achieved assignment credits");
+        }
+    }
 }
