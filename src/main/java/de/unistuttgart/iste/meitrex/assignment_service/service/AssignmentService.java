@@ -121,8 +121,6 @@ public class AssignmentService {
         final AssignmentEntity assignmentEntity = requireAssignmentExists(input.getAssessmentId());
         final double requiredPercentage = assignmentEntity.getRequiredPercentage() == null ? 0.5 : assignmentEntity.getRequiredPercentage();
 
-        // TODO is "updateExerciseStatistics(input, userId, assignmentEntity)" needed?
-
         final double achievedCredits = input.getAchievedCredits();
         final double totalCredits = assignmentEntity.getTotalCredits();
 
