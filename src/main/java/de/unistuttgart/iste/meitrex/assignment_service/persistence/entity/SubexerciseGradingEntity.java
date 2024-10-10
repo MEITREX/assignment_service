@@ -29,7 +29,7 @@ public class SubexerciseGradingEntity {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class PrimaryKey implements Serializable {
-        private UUID assessmentId;
+        private UUID itemId;
         private UUID userId;
 
     }
