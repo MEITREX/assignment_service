@@ -9,7 +9,6 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,7 +47,8 @@ public class TestUtils {
         return assignmentRepository.save(assignmentEntity);
     }
 
-
+    @Transactional(Transactional.TxType.REQUIRES_NEW) // Required so the data is committed to the repo before the
+    // rest of the test method which calls this method is executed.
     public List<GradingEntity> populateGradingRepository(final GradingRepository gradingRepository, final AssignmentEntity assignmentEntity) {
 
         final UUID studentId1 = UUID.randomUUID();

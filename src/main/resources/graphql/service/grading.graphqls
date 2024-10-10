@@ -8,9 +8,9 @@ type Grading {
     assessmentId: UUID!
 
     """
-    ID of the user the grading belongs to.
+    ID of the student the grading belongs to.
     """
-    userId: UUID!
+    studentId: UUID!
 
     """
     The date and time of when the tutor corrected the assignment.
@@ -35,9 +35,9 @@ type ExerciseGrading {
     itemId: UUID!
 
     """
-    ID of the user the exercise-grading belongs to.
+    ID of the student the exercise-grading belongs to.
     """
-    userId: UUID!
+    studentId: UUID!
 
     """
     The absolute number of achieved credits on the exercise.
@@ -57,9 +57,9 @@ type SubexerciseGrading {
     itemId: UUID!
 
     """
-    ID of the user the subexercise-grading belongs to.
+    ID of the student the subexercise-grading belongs to.
     """
-    userId: UUID!
+    studentId: UUID!
 
     """
     The absolute number of achieved credits on the subexercise.

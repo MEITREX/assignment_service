@@ -10,10 +10,14 @@ import de.unistuttgart.iste.meitrex.assignment_service.test_utils.TestUtils;
 import de.unistuttgart.iste.meitrex.common.testutil.GraphQlApiTest;
 import de.unistuttgart.iste.meitrex.common.testutil.InjectCurrentUserHeader;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
+import de.unistuttgart.iste.meitrex.generated.dto.Grading;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.test.tester.GraphQlTester;
 
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +34,9 @@ public class QueryGetGradingForAssignmentForStudentTest {
     private GradingRepository gradingRepository;
     private final UUID courseId = UUID.randomUUID();
 
+    @Autowired
+    private AssignmentMapper assignmentMapper;
+
     @InjectCurrentUserHeader
     private final LoggedInUser loggedInUser = userWithMembershipInCourseWithId(courseId, LoggedInUser.UserRoleInCourse.ADMINISTRATOR);
 
@@ -45,16 +52,16 @@ public class QueryGetGradingForAssignmentForStudentTest {
                 query($assignmentId: UUID!, $studentId: UUID!) {
                     getGradingForAssignmentForStudent(assessmentId: $assignmentId, studentId: $studentId) {
                         assessmentId
-                        userId
+                        studentId
                         date
                         achievedCredits
                         exerciseGradings {
                             itemId
-                            userId
+                            studentId
                             achievedCredits
                             subexerciseGradings {
                                 itemId
-                                userId
+                                studentId
                                 achievedCredits
                             }
                         }
@@ -64,15 +71,20 @@ public class QueryGetGradingForAssignmentForStudentTest {
 
         GradingEntity gradingEntity1 = originalGradingEntities.get(0);
 
-        GradingEntity receivedGradingEntity = tester.document(query)
+        Grading receivedGradingEntity = tester.document(query)
                 .variable("assignmentId", assignmentEntity.getAssessmentId())
                 .variable("studentId", gradingEntity1.getPrimaryKey().getStudentId())
                 .execute()
                 .path("getGradingForAssignmentForStudent")
-                .entity(GradingEntity.class)
+                .entity(Grading.class)
                 .get();
 
-        assertThat(gradingEntity1, is(receivedGradingEntity));
+        // times need to be adjusted because repository (presumably) rounds to milliseconds and converts to UTC
+        gradingEntity1.setDate(gradingEntity1.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
+        receivedGradingEntity.setDate(receivedGradingEntity.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
+
+
+        assertThat(assignmentMapper.gradingEntityToDto(gradingEntity1), is(receivedGradingEntity));
     }
 
 
@@ -85,16 +97,16 @@ public class QueryGetGradingForAssignmentForStudentTest {
                 query($assignmentId: UUID!, $studentId: UUID!) {
                     getGradingForAssignmentForStudent(assessmentId: $assignmentId, studentId: $studentId) {
                         assessmentId
-                        userId
+                        studentId
                         date
                         achievedCredits
                         exerciseGradings {
                             itemId
-                            userId
+                            studentId
                             achievedCredits
                             subexerciseGradings {
                                 itemId
-                                userId
+                                studentId
                                 achievedCredits
                             }
                         }
@@ -104,15 +116,20 @@ public class QueryGetGradingForAssignmentForStudentTest {
 
         GradingEntity gradingEntity3 = originalGradingEntities.get(2);
 
-        GradingEntity receivedGradingEntity = tester.document(query)
+        Grading receivedGradingEntity = tester.document(query)
                 .variable("assignmentId", assignmentEntity.getAssessmentId())
                 .variable("studentId", gradingEntity3.getPrimaryKey().getStudentId())
                 .execute()
                 .path("getGradingForAssignmentForStudent")
-                .entity(GradingEntity.class)
+                .entity(Grading.class)
                 .get();
 
-        assertThat(gradingEntity3, is(receivedGradingEntity));
+
+        // times need to be adjusted because repository (presumably) rounds to milliseconds and converts to UTC
+        gradingEntity3.setDate(gradingEntity3.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
+        receivedGradingEntity.setDate(receivedGradingEntity.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
+
+        assertThat(assignmentMapper.gradingEntityToDto(gradingEntity3), is(receivedGradingEntity));
     }
 
 }

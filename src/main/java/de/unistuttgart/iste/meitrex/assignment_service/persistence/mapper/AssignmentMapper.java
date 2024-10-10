@@ -93,6 +93,9 @@ public class AssignmentMapper {
     public Grading gradingEntityToDto(final GradingEntity gradingEntity) {
         Grading mappedGrading = modelMapper.map(gradingEntity, Grading.class);
 
+        mappedGrading.setAssessmentId(gradingEntity.getPrimaryKey().getAssessmentId());
+        mappedGrading.setStudentId(gradingEntity.getPrimaryKey().getStudentId());
+
         mappedGrading.setExerciseGradings(gradingEntity.getExerciseGradings().stream().map(this::exerciseGradingEntityToDto).toList());
 
         return mappedGrading;
@@ -101,13 +104,19 @@ public class AssignmentMapper {
     public ExerciseGrading exerciseGradingEntityToDto(final ExerciseGradingEntity exerciseGradingEntity) {
         ExerciseGrading mappedExerciseGrading = modelMapper.map(exerciseGradingEntity, ExerciseGrading.class);
 
+        mappedExerciseGrading.setItemId(exerciseGradingEntity.getPrimaryKey().getItemId());
+        mappedExerciseGrading.setStudentId(exerciseGradingEntity.getPrimaryKey().getStudentId());
+
         mappedExerciseGrading.setSubexerciseGradings(exerciseGradingEntity.getSubexerciseGradings().stream().map(this::subexerciseGradingEntityToDto).toList());
 
         return mappedExerciseGrading;
     }
 
     public SubexerciseGrading subexerciseGradingEntityToDto(final SubexerciseGradingEntity subexerciseGradingEntity) {
-        return modelMapper.map(subexerciseGradingEntity, SubexerciseGrading.class);
+        SubexerciseGrading mappedSubexerciseGrading = modelMapper.map(subexerciseGradingEntity, SubexerciseGrading.class);
+        mappedSubexerciseGrading.setItemId(subexerciseGradingEntity.getPrimaryKey().getItemId());
+        mappedSubexerciseGrading.setStudentId(subexerciseGradingEntity.getPrimaryKey().getStudentId());
+        return mappedSubexerciseGrading;
     }
 
 }
