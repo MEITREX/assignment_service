@@ -1,10 +1,15 @@
 package de.unistuttgart.iste.meitrex.assignment_service.validation;
 
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseGradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.GradingEntity;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.UUID;
 
 @Component
 public class AssignmentValidator {
@@ -74,5 +79,27 @@ public class AssignmentValidator {
         if (Math.abs(assignmentCredits - exerciseSum) > EPSILON) {
             throw new ValidationException("Achieved exercise credits do not sum up to achieved assignment credits");
         }
+    }
+
+    /**
+     * Validate that the amount of exercises and subexercises are the same in assignment and grading
+     *
+     * @param assignmentEntity the assignment entity
+     * @param gradingEntity the grading entity that should fit the assignment entity
+     */
+    public void validateGradingEntityFitsAssignmentEntity(final AssignmentEntity assignmentEntity, final GradingEntity gradingEntity) {
+        List<ExerciseEntity> assignmentExercises = assignmentEntity.getExercises();
+        List<ExerciseGradingEntity> gradingExercises = gradingEntity.getExerciseGradings();
+
+        if (assignmentExercises.size() != gradingExercises.size()) {
+            throw new ValidationException("Not the same amount of exercises in grading and assignment!");
+        }
+
+        for (int i = 0; i < assignmentExercises.size(); i++) {
+            if (assignmentExercises.get(i).getSubexercises().size() != gradingExercises.get(i).getSubexerciseGradings().size()) {
+                throw new ValidationException("Not the same amount of subexercises in grading and assignment for exercise %d!".formatted(i));
+            }
+        }
+
     }
 }
