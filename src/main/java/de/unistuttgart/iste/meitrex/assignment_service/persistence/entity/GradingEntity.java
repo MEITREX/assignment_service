@@ -1,7 +1,5 @@
 package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity;
 
-
-import de.unistuttgart.iste.meitrex.generated.dto.ExerciseGrading;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
