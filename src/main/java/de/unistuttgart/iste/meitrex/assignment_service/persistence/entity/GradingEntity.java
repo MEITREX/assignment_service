@@ -1,5 +1,6 @@
 package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity;
 
+import de.unistuttgart.iste.meitrex.common.persistence.IWithId;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +17,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class GradingEntity {
+public class GradingEntity implements IWithId<GradingEntity.PrimaryKey> {
 
     @EmbeddedId
     private PrimaryKey primaryKey;
@@ -39,6 +40,11 @@ public class GradingEntity {
         private UUID assessmentId;
         private UUID userId;
 
+    }
+
+    @Override
+    public PrimaryKey getId() {
+        return primaryKey;
     }
 
 }
