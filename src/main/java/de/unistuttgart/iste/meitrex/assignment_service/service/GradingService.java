@@ -28,8 +28,6 @@ public class GradingService {
     private final TopicPublisher topicPublisher;
     private final AssignmentService assignmentService;
 
-    // TODO need to filter for newest, in case there are more than one
-
     public Grading getGradingForAssignmentForStudent(final UUID assignmentId, final UUID studentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId); // throws EntityNotFoundException "Assignment with assessmentId %s not found"
         try {

@@ -17,7 +17,6 @@ import org.springframework.graphql.test.tester.GraphQlTester;
 
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
 import java.util.List;
 import java.util.UUID;
 
