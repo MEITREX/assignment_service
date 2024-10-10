@@ -1,5 +1,6 @@
 package de.unistuttgart.iste.meitrex.assignment_service.controller;
 
+import de.unistuttgart.iste.meitrex.assignment_service.service.GradingService;
 import de.unistuttgart.iste.meitrex.common.exception.NoAccessToCourseException;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
@@ -20,6 +21,7 @@ import static de.unistuttgart.iste.meitrex.common.user_handling.UserCourseAccess
 public class AssignmentController {
 
     private final AssignmentService assignmentService;
+    private final GradingService gradingService;
 
     /* Query Mappings */
 
@@ -38,6 +40,11 @@ public class AssignmentController {
                     }
                 })
                 .toList();
+    }
+
+    @QueryMapping
+    public Grading getGradingForAssignmentForStudent(@Argument final UUID assessmentId, @Argument final UUID studentId, @ContextValue final LoggedInUser currentUser) {
+        return gradingService.getGradingForAssignmentForStudent(assessmentId, studentId, currentUser);
     }
 
     /* Mutation Mappings */

@@ -35,7 +35,7 @@ public class ExerciseGradingEntity {
     @AllArgsConstructor
     public static class PrimaryKey implements Serializable {
         private UUID itemId;
-        private UUID userId;
+        private UUID studentId;
 
     }
 

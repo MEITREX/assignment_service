@@ -38,7 +38,7 @@ public class GradingEntity implements IWithId<GradingEntity.PrimaryKey> {
     @AllArgsConstructor
     public static class PrimaryKey implements Serializable {
         private UUID assessmentId;
-        private UUID userId;
+        private UUID studentId;
 
     }
 

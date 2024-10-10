@@ -1,9 +1,7 @@
 package de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.SubexerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.*;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
@@ -90,6 +88,26 @@ public class AssignmentMapper {
 
     public Subexercise subexerciseEntityToDto(final SubexerciseEntity subexerciseEntity) {
         return modelMapper.map(subexerciseEntity, Subexercise.class);
+    }
+
+    public Grading gradingEntityToDto(final GradingEntity gradingEntity) {
+        Grading mappedGrading = modelMapper.map(gradingEntity, Grading.class);
+
+        mappedGrading.setExerciseGradings(gradingEntity.getExerciseGradings().stream().map(this::exerciseGradingEntityToDto).toList());
+
+        return mappedGrading;
+    }
+
+    public ExerciseGrading exerciseGradingEntityToDto(final ExerciseGradingEntity exerciseGradingEntity) {
+        ExerciseGrading mappedExerciseGrading = modelMapper.map(exerciseGradingEntity, ExerciseGrading.class);
+
+        mappedExerciseGrading.setSubexerciseGradings(exerciseGradingEntity.getSubexerciseGradings().stream().map(this::subexerciseGradingEntityToDto).toList());
+
+        return mappedExerciseGrading;
+    }
+
+    public SubexerciseGrading subexerciseGradingEntityToDto(final SubexerciseGradingEntity subexerciseGradingEntity) {
+        return modelMapper.map(subexerciseGradingEntity, SubexerciseGrading.class);
     }
 
 }

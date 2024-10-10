@@ -13,5 +13,5 @@ type Query {
     🔒 The user must be enrolled in the course the assignment belong to to access them. Otherwise null is returned for
     an assignment if the user has no access to it.
     """
-    getGradingForAssignmentForStudent(assessmentId: UUID!, userId: UUID!): Grading!
+    getGradingForAssignmentForStudent(assessmentId: UUID!, studentId: UUID!): Grading!
 }
