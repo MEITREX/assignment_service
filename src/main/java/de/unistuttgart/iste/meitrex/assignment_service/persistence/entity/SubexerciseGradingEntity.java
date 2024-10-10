@@ -22,7 +22,7 @@ public class SubexerciseGradingEntity {
     @ManyToOne
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
-    private GradingEntity parentExerciseGrading;
+    private ExerciseGradingEntity parentExerciseGrading;
 
     @Data
     @Embeddable
