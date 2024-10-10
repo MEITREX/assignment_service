@@ -6,4 +6,12 @@ type Query {
     an assignment if the user has no access to it.
     """
     findAssignmentsByAssessmentIds(assessmentIds: [UUID!]!): [Assignment]!
+
+
+    """
+    Get a grading for one assignment for one student
+    🔒 The user must be enrolled in the course the assignment belong to to access them. Otherwise null is returned for
+    an assignment if the user has no access to it.
+    """
+    getGradingForAssignmentForStudent(assessmentId: UUID!, userId: UUID!): Grading!
 }

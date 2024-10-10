@@ -1,0 +1,68 @@
+"""
+A grading contains a user's achieved credits on an assignment and its exercises and subexercises.
+"""
+type Grading {
+    """
+    ID of the assignment.
+    """
+    assessmentId: UUID!
+
+    """
+    ID of the user the grading belongs to.
+    """
+    userId: UUID!
+
+    """
+    The date and time of when the tutor corrected the assignment.
+    """
+    date: DateTime!
+
+    """
+    The absolute number of achieved credits on the assignment.
+    """
+    achievedCredits: Float!
+
+    """
+    List of exercise-gradings for each exercise in the assignment. Can be empty, if there are no exercises within the assignment.
+    """
+    exerciseGradings: [ExerciseGrading]!
+}
+
+type ExerciseGrading {
+    """
+    ID of the exercise.
+    """
+    itemId: UUID!
+
+    """
+    ID of the user the exercise-grading belongs to.
+    """
+    userId: UUID!
+
+    """
+    The absolute number of achieved credits on the exercise.
+    """
+    achievedCredits: Float!
+
+    """
+    List of subexercise-gradings for each subexercise in the exercise. Can be empty, if there are no subexercises within the exercise.
+    """
+    subexerciseGradings: [SubexerciseGrading]!
+}
+
+type SubexerciseGrading {
+    """
+    ID of the subexercise.
+    """
+    itemId: UUID!
+
+    """
+    ID of the user the subexercise-grading belongs to.
+    """
+    userId: UUID!
+
+    """
+    The absolute number of achieved credits on the subexercise.
+    """
+    achievedCredits: Float!
+}
