@@ -12,7 +12,7 @@ import java.util.List;
 
 @Component
 public class AssignmentValidator {
-    private final double EPSILON = 0.01;
+    private static final double EPSILON = 0.01;
 
     public void validateCreateAssignmentInput(final CreateAssignmentInput createAssignmentInput) {
         final List<CreateExerciseInput> exercises = createAssignmentInput.getExercises();

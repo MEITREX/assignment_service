@@ -17,7 +17,7 @@ import java.util.UUID;
 
 import static de.unistuttgart.iste.meitrex.common.testutil.TestUsers.userWithMembershipInCourseWithId;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.*;
 
 @GraphQlApiTest
 public class QueryFindAssignmentsTest {
@@ -104,11 +104,15 @@ public class QueryFindAssignmentsTest {
                 }
                 """;
 
-        tester.document(query)
+        List<Assignment> assignments = tester.document(query)
                 .variable("ids", List.of(UUID.randomUUID(), UUID.randomUUID()))
                 .execute()
-                .path("findAssignmentsByAssessmentIds[0]").valueIsNull()
-                .path("findAssignmentsByAssessmentIds[1]").valueIsNull();
+                .path("findAssignmentsByAssessmentIds")
+                .entityList(Assignment.class)
+                .get();
+
+        assertThat(assignments.get(0), is(nullValue()));
+        assertThat(assignments.get(1), is(nullValue()));
     }
 
 }

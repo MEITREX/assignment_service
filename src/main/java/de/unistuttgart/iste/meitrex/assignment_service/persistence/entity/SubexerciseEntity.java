@@ -1,7 +1,6 @@
 package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity;
 
 import de.unistuttgart.iste.meitrex.common.persistence.IWithId;
-import de.unistuttgart.iste.meitrex.generated.dto.Exercise;
 import jakarta.persistence.*;
 import lombok.*;
 
