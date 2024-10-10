@@ -5,7 +5,7 @@ type Mutation {
     """
     Creates a new assignment. Mutation is only accessible internally within the system by other
     services and the gateway.
-    ⚠️ This mutation is only accessible internally in the system and allows the caller to create FlashcardSets without
+    ⚠️ This mutation is only accessible internally in the system and allows the caller to create assignments without
     any permissions check and should not be called without any validation of the caller's permissions. ⚠️
     """
     _internal_noauth_createAssignment(courseId: UUID!, assessmentId: UUID!, input: CreateAssignmentInput!): Assignment!
@@ -203,9 +203,9 @@ input LogAssignmentCompletedInput {
     achievedCredits: Float!
 
     """
-    List of exercises that were completed in the assignment.
+    List of exercises that were completed in the assignment. Can be empty, if there are no exercises within the assignment.
     """
-    completedExercises: [ExerciseCompletedInput!]!
+    completedExercises: [ExerciseCompletedInput]!
 }
 
 input ExerciseCompletedInput {
@@ -220,9 +220,9 @@ input ExerciseCompletedInput {
     achievedCredits: Float!
 
     """
-    List of subexercises that were completed in the exercise.
+    List of subexercises that were completed in the exercise. Can be empty, if there are no subexercises within the exercise.
     """
-    completedSubexercises: [SubexerciseCompletedInput!]!
+    completedSubexercises: [SubexerciseCompletedInput]!
 }
 
 input SubexerciseCompletedInput {
