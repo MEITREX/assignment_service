@@ -67,7 +67,8 @@ public class MutationCreateAssignmentTest {
                         assignmentType: EXERCISE_SHEET,
                         date: "2021-01-01T00:00:00.000Z",
                         description: "exercise sheet 1",
-                        requiredPercentage: 0.2
+                        requiredPercentage: 0.2,
+                        externalId: "123456789123456789"
                         }
                     )
                     {
@@ -88,6 +89,7 @@ public class MutationCreateAssignmentTest {
                         assignmentType
                         description
                         requiredPercentage
+                        externalId
                     }
                 }
                 """;
@@ -112,6 +114,7 @@ public class MutationCreateAssignmentTest {
         assertThat(createdAssignment.getDate(), is(LocalDate.of(2021, 1, 1).atStartOfDay().atOffset(ZoneOffset.UTC)));
         assertThat(createdAssignment.getDescription(), is("exercise sheet 1"));
         assertThat(createdAssignment.getRequiredPercentage(), is(0.2));
+        assertThat(createdAssignment.getExternalId(), is("123456789123456789"));
 
         final List<Exercise> exercises = createdAssignment.getExercises();
         assertThat(exercises, hasSize(2));

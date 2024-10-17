@@ -40,6 +40,9 @@ public class AssignmentEntity implements IWithId<UUID> {
     @Column(nullable = true)
     private Double requiredPercentage;
 
+    @Column(nullable = true)
+    private String externalId;
+
     @Override
     public UUID getId() {
         return assessmentId;
