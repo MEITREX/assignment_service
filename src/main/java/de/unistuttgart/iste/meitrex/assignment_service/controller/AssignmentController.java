@@ -52,6 +52,7 @@ public class AssignmentController {
     public List<ExternalAssignment> getExternalAssignments(@Argument final UUID courseId, @ContextValue final LoggedInUser currentUser) {
         return gradingService.getExternalAssignments(courseId, currentUser);
     }
+
     /* Mutation Mappings */
 
     @MutationMapping(name = "_internal_noauth_createAssignment")

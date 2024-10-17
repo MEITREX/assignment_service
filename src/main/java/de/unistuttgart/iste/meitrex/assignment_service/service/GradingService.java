@@ -15,8 +15,15 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.net.Authenticator;
+import java.net.PasswordAuthentication;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static de.unistuttgart.iste.meitrex.common.user_handling.UserCourseAccessValidator.validateUserHasAccessToCourse;
 
@@ -49,7 +56,28 @@ public class GradingService {
         } catch (final NoAccessToCourseException ex) {
             return null;
         }
+
         // get stuff from TMS here
+
+        CompletableFuture<String> response;
+        try (HttpClient client = HttpClient.newBuilder().authenticator(new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(
+                        "username",
+                        "password".toCharArray());
+            }
+        }).build()) {
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create("")).build();
+            response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
+        }
+        String body = response.join();
+        List<ExternalAssignment> externalAssignments = this.parseStringIntoList(body);
+
+        return externalAssignments;
+    }
+
+    private List<ExternalAssignment> parseStringIntoList(final String string) {
         return null;
     }
 
