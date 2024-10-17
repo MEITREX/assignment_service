@@ -29,6 +29,7 @@ public class TestUtils {
         assignmentEntity.setCourseId(courseId);
         assignmentEntity.setAssignmentType(AssignmentType.EXERCISE_SHEET);
         assignmentEntity.setTotalCredits(50f);
+        assignmentEntity.setExternalId("assignment1externalId");
 
         ExerciseEntity exerciseEntity = new ExerciseEntity();
         exerciseEntity.setParentAssignment(assignmentEntity);
