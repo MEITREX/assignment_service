@@ -102,6 +102,14 @@ type Subexercise {
 }
 
 """
+An external Assignment such as the ones from TMS. These are needed for mapping Meitrex Assignments to external ones for importing gradings.
+"""
+type ExternalAssignment {
+    externalId: String!
+    sheetNo: Float!
+}
+
+"""
 The type of assignment.
 """
 enum AssignmentType {

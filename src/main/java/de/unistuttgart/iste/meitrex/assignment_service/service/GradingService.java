@@ -9,11 +9,13 @@ import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentVali
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.meitrex.common.exception.NoAccessToCourseException;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
+import de.unistuttgart.iste.meitrex.generated.dto.ExternalAssignment;
 import de.unistuttgart.iste.meitrex.generated.dto.Grading;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 import static de.unistuttgart.iste.meitrex.common.user_handling.UserCourseAccessValidator.validateUserHasAccessToCourse;
@@ -39,6 +41,16 @@ public class GradingService {
                 .orElseThrow(() -> new EntityNotFoundException("Grading with assessmentId %s and studentId %s not found".formatted(assignmentId, studentId)));
 
         return assignmentMapper.gradingEntityToDto(gradingEntity);
+    }
+
+    public List<ExternalAssignment> getExternalAssignments(final UUID courseId, final LoggedInUser currentUser) {
+        try {
+            validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
+        } catch (final NoAccessToCourseException ex) {
+            return null;
+        }
+        // get stuff from TMS here
+        return null;
     }
 
 }
