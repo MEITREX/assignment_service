@@ -14,13 +14,13 @@ import de.unistuttgart.iste.meitrex.generated.dto.Grading;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.json.*;
 
-import java.net.Authenticator;
-import java.net.PasswordAuthentication;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -57,28 +57,39 @@ public class GradingService {
             return null;
         }
 
-        // get stuff from TMS here
+        // these need to be set!
+        String authToken = "";
+        String basePath = "";
 
+        String body;
         CompletableFuture<String> response;
-        try (HttpClient client = HttpClient.newBuilder().authenticator(new Authenticator() {
-            @Override
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(
-                        "username",
-                        "password".toCharArray());
-            }
-        }).build()) {
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create("")).build();
+        try (HttpClient client = HttpClient.newBuilder().build()) {
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(basePath + "api/sheet"))
+                    //.header("Authorization", "Basic " + Base64.getEncoder().encodeToString("username:password".getBytes()))
+                    .header("Cookie", "connect.sid=" + authToken)
+                    .build();
             response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
+            body = response.join();
         }
-        String body = response.join();
+        if (body == null) return null;
         List<ExternalAssignment> externalAssignments = this.parseStringIntoList(body);
 
         return externalAssignments;
     }
 
     private List<ExternalAssignment> parseStringIntoList(final String string) {
-        return null;
+
+        JSONArray sheetArray = new JSONArray(string);
+        List<ExternalAssignment> externalAssignmentList = new ArrayList<>(sheetArray.length());
+
+        for (int i = 0; i < sheetArray.length(); i++) {
+            ExternalAssignment externalAssignment = new ExternalAssignment();
+            JSONObject sheetObject = sheetArray.getJSONObject(i);
+            externalAssignment.setExternalId(sheetObject.getString("id"));
+            externalAssignment.setSheetNo(sheetObject.getDouble("sheetNo"));
+            externalAssignmentList.add(externalAssignment);
+        }
+        return externalAssignmentList;
     }
 
 }
