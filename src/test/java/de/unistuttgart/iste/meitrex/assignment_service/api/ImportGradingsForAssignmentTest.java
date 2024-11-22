@@ -49,6 +49,8 @@ public class ImportGradingsForAssignmentTest {
     @Transactional
     @Commit
     void testImportGradingsForAssignment(final GraphQlTester tester) {
+        // tests for a sheet and grading made on local TMS setup
+
         // create sheetNo 1 in MEITREX
 
         UUID exerciseId1 = UUID.randomUUID();
@@ -193,6 +195,9 @@ public class ImportGradingsForAssignmentTest {
         receivedGrading.setDate(receivedGrading.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
 
         assertThat(assignmentMapper.gradingEntityToDto(expectedGradingEntity), is(receivedGrading));
+
+        // fails for two reasons:  - date is not correct (as is expected from code)
+        //                         - achievedExerciseCredits are 0 from TMS (makes more sense to fix in TMS than to work around in MEITREX)
     }
 
 }
