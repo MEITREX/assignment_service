@@ -155,49 +155,91 @@ public class ImportGradingsForAssignmentTest {
                 .get();
 
         // create reference grading
-        GradingEntity expectedGradingEntity = GradingEntity.builder()
+        GradingEntity expectedGradingEntityOne = GradingEntity.builder()
                 .primaryKey(new GradingEntity.PrimaryKey(assessmentId, studentId))
                 .date(OffsetDateTime.now())
                 .achievedCredits(40.5)
                 .build();
-        ExerciseGradingEntity exerciseGrading1 = ExerciseGradingEntity.builder()
+        ExerciseGradingEntity exerciseGradingOne1 = ExerciseGradingEntity.builder()
                 .primaryKey(new ExerciseGradingEntity.PrimaryKey(assignment.getExercises().getFirst().getItemId(), studentId))
-                .parentGrading(expectedGradingEntity)
+                .parentGrading(expectedGradingEntityOne)
                 .achievedCredits(40)
                 .build();
-        exerciseGrading1.setSubexerciseGradings(
+        exerciseGradingOne1.setSubexerciseGradings(
                 List.of(
                         new SubexerciseGradingEntity(new SubexerciseGradingEntity.PrimaryKey(assignment.getExercises().getFirst().getSubexercises().get(0).getItemId(), studentId),
-                                14, exerciseGrading1),
+                                14, exerciseGradingOne1),
                         new SubexerciseGradingEntity(new SubexerciseGradingEntity.PrimaryKey(assignment.getExercises().getFirst().getSubexercises().get(1).getItemId(), studentId),
-                                25, exerciseGrading1),
+                                25, exerciseGradingOne1),
                         new SubexerciseGradingEntity(new SubexerciseGradingEntity.PrimaryKey(assignment.getExercises().getFirst().getSubexercises().get(2).getItemId(), studentId),
-                                1, exerciseGrading1)
+                                1, exerciseGradingOne1)
                 )
         );
-        ExerciseGradingEntity exerciseGrading2 = ExerciseGradingEntity.builder()
+        ExerciseGradingEntity exerciseGradingOne2 = ExerciseGradingEntity.builder()
                 .primaryKey(new ExerciseGradingEntity.PrimaryKey(assignment.getExercises().getLast().getItemId(), studentId))
-                .parentGrading(expectedGradingEntity)
+                .parentGrading(expectedGradingEntityOne)
                 .achievedCredits(0.5)
                 .build();
-        exerciseGrading2.setSubexerciseGradings(
+        exerciseGradingOne2.setSubexerciseGradings(
                 List.of(
                         new SubexerciseGradingEntity(new SubexerciseGradingEntity.PrimaryKey(assignment.getExercises().getLast().getSubexercises().getFirst().getItemId(), studentId),
-                                0.5, exerciseGrading2)
+                                0.5, exerciseGradingOne2)
                 )
         );
-        expectedGradingEntity.setExerciseGradings(List.of(exerciseGrading1, exerciseGrading2));
+        expectedGradingEntityOne.setExerciseGradings(List.of(exerciseGradingOne1, exerciseGradingOne2));
 
         // check if gradings match
 
         // times need to be adjusted because repository (presumably) rounds to milliseconds and converts to UTC
-        expectedGradingEntity.setDate(expectedGradingEntity.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
+        expectedGradingEntityOne.setDate(expectedGradingEntityOne.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
         receivedGrading.setDate(receivedGrading.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
 
-        assertThat(assignmentMapper.gradingEntityToDto(expectedGradingEntity), is(receivedGrading));
+        assertThat(assignmentMapper.gradingEntityToDto(expectedGradingEntityOne), is(receivedGrading));
 
         // fails for two reasons:  - date is not correct (as is expected from code)
         //                         - achievedExerciseCredits are 0 from TMS (makes more sense to fix in TMS than to work around in MEITREX)
+
+
+        /*
+        Currently can't change studentId in GradingService, so can't check a second grading.
+
+        // check second grading
+        // create reference grading
+        GradingEntity expectedGradingEntityTwo = GradingEntity.builder()
+                .primaryKey(new GradingEntity.PrimaryKey(assessmentId, studentId))
+                .date(OffsetDateTime.now())
+                .achievedCredits(40.5)
+                .build();
+        ExerciseGradingEntity exerciseGradingTwo1 = ExerciseGradingEntity.builder()
+                .primaryKey(new ExerciseGradingEntity.PrimaryKey(assignment.getExercises().getFirst().getItemId(), studentId))
+                .parentGrading(expectedGradingEntityTwo)
+                .achievedCredits(40)
+                .build();
+        exerciseGradingTwo1.setSubexerciseGradings(
+                List.of(
+                        new SubexerciseGradingEntity(new SubexerciseGradingEntity.PrimaryKey(assignment.getExercises().getFirst().getSubexercises().get(0).getItemId(), studentId),
+                                14, exerciseGradingTwo1),
+                        new SubexerciseGradingEntity(new SubexerciseGradingEntity.PrimaryKey(assignment.getExercises().getFirst().getSubexercises().get(1).getItemId(), studentId),
+                                25, exerciseGradingTwo1),
+                        new SubexerciseGradingEntity(new SubexerciseGradingEntity.PrimaryKey(assignment.getExercises().getFirst().getSubexercises().get(2).getItemId(), studentId),
+                                1, exerciseGradingTwo1)
+                )
+        );
+        ExerciseGradingEntity exerciseGradingTwo2 = ExerciseGradingEntity.builder()
+                .primaryKey(new ExerciseGradingEntity.PrimaryKey(assignment.getExercises().getLast().getItemId(), studentId))
+                .parentGrading(expectedGradingEntityTwo)
+                .achievedCredits(0.5)
+                .build();
+        exerciseGradingTwo2.setSubexerciseGradings(
+                List.of(
+                        new SubexerciseGradingEntity(new SubexerciseGradingEntity.PrimaryKey(assignment.getExercises().getLast().getSubexercises().getFirst().getItemId(), studentId),
+                                0.5, exerciseGradingTwo2)
+                )
+        );
+        expectedGradingEntityTwo.setExerciseGradings(List.of(exerciseGradingTwo1, exerciseGradingTwo2));
+
+        */
+
     }
 
 }
