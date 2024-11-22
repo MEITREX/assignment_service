@@ -39,6 +39,10 @@ public class GradingService {
     private final TopicPublisher topicPublisher;
     private final AssignmentService assignmentService;
 
+    // these need to be set!
+    private static final String authToken = "";
+    private static final String basePath = "";
+
     public Grading getGradingForAssignmentForStudent(final UUID assignmentId, final UUID studentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId); // throws EntityNotFoundException "Assignment with assessmentId %s not found"
         try {
@@ -62,15 +66,11 @@ public class GradingService {
      * @param assignmentId id of the assignment of which the gradings should be imported
      * @param currentUser the user requesting the import (needs to be admin)
      */
-    private void importGradingsForAssignment(final UUID assignmentId, final LoggedInUser currentUser) {
+    public void importGradingsForAssignment(final UUID assignmentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId); // throws EntityNotFoundException "Assignment with assessmentId %s not found"
         validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, assignment.getCourseId());
 
         String externalId = assignment.getExternalId();
-
-        // these need to be set!
-        String authToken = "";
-        String basePath = "";
 
         String body;
         CompletableFuture<String> response;
@@ -120,13 +120,15 @@ public class GradingService {
         final GradingEntity gradingEntity = new GradingEntity();
 
         String externalStudentId = jsonObject.getString("studentId"); // TODO match this to Meitrex student id
-        UUID studentId = null;
+        UUID studentId = UUID.nameUUIDFromBytes("this needs to be changed".getBytes());
+
+        JSONObject gradingData = jsonObject.getJSONObject("gradingData");
 
         gradingEntity.setPrimaryKey(new GradingEntity.PrimaryKey(assignmentEntity.getId(), studentId));
-        gradingEntity.setAchievedCredits(jsonObject.getDouble("points"));
+        gradingEntity.setAchievedCredits(gradingData.getDouble("points"));
         gradingEntity.setDate(OffsetDateTime.now()); // TODO can this be more precise?
 
-        JSONArray exerciseArray = jsonObject.getJSONArray("exerciseGradings");
+        JSONArray exerciseArray = gradingData.getJSONArray("exerciseGradings");
         List<ExerciseGradingEntity> exerciseGradingEntities = new ArrayList<>(exerciseArray.length());
         List<ExerciseEntity> exerciseEntities = assignmentEntity.getExercises();
 
@@ -237,10 +239,6 @@ public class GradingService {
         } catch (final NoAccessToCourseException ex) {
             return null;
         }
-
-        // these need to be set!
-        String authToken = "";
-        String basePath = "";
 
         String body;
         CompletableFuture<String> response;
