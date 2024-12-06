@@ -5,6 +5,6 @@ import de.unistuttgart.iste.meitrex.common.persistence.MeitrexRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface StudentMappingRepository extends MeitrexRepository<StudentMappingEntity, StudentMappingEntity.StudentMappingKey> {
+public interface StudentMappingRepository extends MeitrexRepository<StudentMappingEntity, String> {
 
 }

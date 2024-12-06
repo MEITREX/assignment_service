@@ -4,6 +4,7 @@ package de.unistuttgart.iste.meitrex.assignment_service.service;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.*;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.StudentMappingRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.meitrex.common.event.ContentProgressedEvent;
@@ -39,6 +40,7 @@ public class GradingService {
     private final AssignmentValidator assignmentValidator;
     private final TopicPublisher topicPublisher;
     private final AssignmentService assignmentService;
+    private final StudentMappingRepository studentMappingRepository;
 
     private final GraphQlClient userServiceClient;
 
@@ -123,7 +125,7 @@ public class GradingService {
         final GradingEntity gradingEntity = new GradingEntity();
 
         String externalStudentId = jsonObject.getString("studentId"); // TODO match this to Meitrex student id
-        UUID studentId = UUID.nameUUIDFromBytes("this needs to be changed".getBytes());
+        UUID studentId = getStudentIdFromExternalStudentId(externalStudentId);
 
         JSONObject gradingData = jsonObject.getJSONObject("gradingData");
 
@@ -225,6 +227,10 @@ public class GradingService {
 
         // publish new user progress event message
         topicPublisher.notifyUserWorkedOnContent(userProgressLogEvent);
+    }
+
+    private UUID getStudentIdFromExternalStudentId(final String externalStudentId) {
+        return UUID.nameUUIDFromBytes("this needs to be changed".getBytes());
     }
 
 

@@ -7,7 +7,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
 import java.util.UUID;
 
 @Entity(name = "StudentMapping")
@@ -15,28 +14,17 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class StudentMappingEntity implements IWithId<StudentMappingEntity.StudentMappingKey>{
+public class StudentMappingEntity implements IWithId<String>{
 
-    // extra short constructor
-    public StudentMappingEntity(final UUID meitrexStudentId, final String externalStudentId) {
-        studentMappingKey = new StudentMappingKey(meitrexStudentId, externalStudentId);
-    }
+    @Id
+    private String externalStudentId;
 
-    @EmbeddedId
-    private StudentMappingKey studentMappingKey;
-
-    @Data
-    @Embeddable
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class StudentMappingKey implements Serializable {
-        private UUID meitrexStudentId;
-        private String externalStudentId;
-    }
+    @Column(nullable = false)
+    private UUID meitrexStudentId;
 
     @Override
-    public StudentMappingKey getId() {
-        return studentMappingKey;
+    public String getId() {
+        return externalStudentId;
     }
 
 }
