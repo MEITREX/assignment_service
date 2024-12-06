@@ -14,6 +14,7 @@ import de.unistuttgart.iste.meitrex.generated.dto.*;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.graphql.client.GraphQlClient;
 import org.springframework.stereotype.Service;
 import org.json.*;
 
@@ -38,6 +39,8 @@ public class GradingService {
     private final AssignmentValidator assignmentValidator;
     private final TopicPublisher topicPublisher;
     private final AssignmentService assignmentService;
+
+    private final GraphQlClient userServiceClient;
 
     // these need to be set!
     private static final String authToken = "";
