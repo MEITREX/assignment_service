@@ -66,3 +66,15 @@ type SubexerciseGrading {
     """
     achievedCredits: Float!
 }
+
+type StudentMapping {
+    """
+    Student Id in Meitrex
+    """
+    meitrexStudentId: UUID!
+
+    """
+    Student Id in external system like TMS
+    """
+    externalStudentId: String!
+}
