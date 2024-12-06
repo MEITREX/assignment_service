@@ -24,9 +24,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import static de.unistuttgart.iste.meitrex.common.user_handling.UserCourseAccessValidator.validateUserHasAccessToCourse;
@@ -230,9 +228,27 @@ public class GradingService {
     }
 
     private UUID getStudentIdFromExternalStudentId(final String externalStudentId) {
+        Optional<StudentMappingEntity> studentMappingEntity = studentMappingRepository.findById(externalStudentId);
+        if (studentMappingEntity.isPresent()) {
+            return studentMappingEntity.get().getMeitrexStudentId();
+        }
+        return findNewStudentMapping(externalStudentId);
+    }
+
+    private UUID findNewStudentMapping(final String externalStudentId) {
+        JSONObject externalStudentInfo = getExternalStudentInfo(externalStudentId);
+        Map<String, String> meitrexStudentInfo = getMeitrexStudentInfo(externalStudentInfo);
+
         return UUID.nameUUIDFromBytes("this needs to be changed".getBytes());
     }
 
+    private JSONObject getExternalStudentInfo(final String externalStudentId) {
+        return null;
+    }
+
+    private Map<String, String> getMeitrexStudentInfo(final JSONObject externalStudentInfo) {
+        return null; // something like result.field(queryName + "[0]").getValue()
+    }
 
     /**
      * Gets external assignment information from TMS. <br>
