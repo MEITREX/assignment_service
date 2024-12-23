@@ -12,7 +12,7 @@ type Mutation {
 
     """
     Modify an assignment.
-    🔒 The user must be an admin the course the assignment is in to perform this action.
+    🔒 The user must be an admin in the course the assignment is in to perform this action.
     """
     mutateAssignment(assessmentId: UUID!): AssignmentMutation!
 
@@ -21,6 +21,14 @@ type Mutation {
     🔒 The user must be a tutor in the course the assignment is in to perform this action.
     """ # TODO keep description up to date throughout development (especially the required roles)
     logAssignmentCompleted(input: LogAssignmentCompletedInput!): AssignmentCompletedFeedback!
+
+    """
+    Saves mappings of meitrex users to external students.
+    Response to ManualMappingInstances.
+    Returns list of all deleted ManualMappingInstance ids.
+    🔒 The user must be an admin in the course to perform this action.
+    """
+    saveStudentMappings(courseId: UUID!, studentMappingInputs: [StudentMappingInput!]!): [String]!
 }
 
 type AssignmentMutation {

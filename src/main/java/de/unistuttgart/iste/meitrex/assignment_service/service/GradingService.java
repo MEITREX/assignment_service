@@ -5,7 +5,9 @@ import de.unistuttgart.iste.meitrex.assignment_service.exception.ManualMappingRe
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.*;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ManualMappingInstanceRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.StudentMappingRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.UnfinishedGradingRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.meitrex.common.event.ContentProgressedEvent;
@@ -42,6 +44,8 @@ public class GradingService {
     private final TopicPublisher topicPublisher;
     private final AssignmentService assignmentService;
     private final StudentMappingRepository studentMappingRepository;
+    private final ManualMappingInstanceRepository manualMappingInstanceRepository;
+    private final UnfinishedGradingRepository unfinishedGradingRepository;
 
     private final GraphQlClient userServiceClient;
 
@@ -110,9 +114,12 @@ public class GradingService {
         final List<GradingEntity> gradingEntityList = new ArrayList<>(gradingArray.length());
         GradingEntity gradingEntity;
         for (int i = 0; i < gradingArray.length(); i++) {
-            gradingEntity = parseIntoGradingEntity(gradingArray.getJSONObject(i), assignmentEntity);
-            if (gradingEntity != null) {
+            JSONObject jsonObject = gradingArray.getJSONObject(i);
+            try {
+                gradingEntity = parseIntoGradingEntity(jsonObject, assignmentEntity);
                 gradingEntityList.add(gradingEntity);
+            } catch (ManualMappingRequiredException e) {
+                // fine, will be handled by manual mapping of admin
             }
         }
         return gradingEntityList;
@@ -125,7 +132,7 @@ public class GradingService {
      * @param assignmentEntity the assignment id which the grading belongs to
      * @return parsed grading entity
      */
-    private GradingEntity parseIntoGradingEntity(final JSONObject jsonObject, final AssignmentEntity assignmentEntity) {
+    private GradingEntity parseIntoGradingEntity(final JSONObject jsonObject, final AssignmentEntity assignmentEntity) throws ManualMappingRequiredException {
         final GradingEntity gradingEntity = new GradingEntity();
 
         String externalStudentId = jsonObject.getString("studentId"); // TODO match this to Meitrex student id
@@ -133,8 +140,22 @@ public class GradingService {
         try {
             studentId = getStudentIdFromExternalStudentId(externalStudentId);
         } catch (ManualMappingRequiredException e) {
-            manualMappingInstanceRepository.save(e.getExternalStudentInfo());
-            return null;
+            // ManualMappingInstance is added to repository, so that an admin can map manually
+            JSONObject externalStudentInfo = e.getExternalStudentInfo();
+            manualMappingInstanceRepository.save(ManualMappingInstanceEntity.fromJson(externalStudentInfo));
+
+            // Grading is added to unfinished grading repository, so that it can be tried again, when a manual mapping was done.
+            UnfinishedGradingEntity unfinishedGradingEntity;
+            Optional<UnfinishedGradingEntity> foundEntityOptional = unfinishedGradingRepository.findById(new UnfinishedGradingEntity.PrimaryKey(externalStudentId, assignmentEntity.getAssessmentId()));
+            if (foundEntityOptional.isPresent()) {
+                unfinishedGradingEntity = foundEntityOptional.get();
+                unfinishedGradingEntity.setNumberOfTries(unfinishedGradingEntity.getNumberOfTries() + 1);
+            } else {
+                unfinishedGradingEntity = UnfinishedGradingEntity.fromJson(jsonObject, assignmentEntity.getAssessmentId());
+            }
+            unfinishedGradingRepository.save(unfinishedGradingEntity);
+
+            throw(e);
         }
 
         JSONObject gradingData = jsonObject.getJSONObject("gradingData");
@@ -244,7 +265,7 @@ public class GradingService {
         if (studentMappingEntity.isPresent()) {
             return studentMappingEntity.get().getMeitrexStudentId();
         }
-        UUID newMeitrexStudentId = findNewStudentIdFromExternalStudentId(externalStudentId);
+        UUID newMeitrexStudentId = findNewStudentIdFromExternalStudentId(externalStudentId); // throws exception if nothing is found
         studentMappingRepository.save(new StudentMappingEntity(externalStudentId, newMeitrexStudentId));
         return newMeitrexStudentId;
     }
@@ -276,9 +297,9 @@ public class GradingService {
             return (UUID) filteredByFirstName.getFirst().get("id");
         }
 
-        // filter by more attributes like email, matriculation number etc if there are still more candidates
+        // filter by more attributes like email, matriculation number etc. if there are still more candidates
 
-        // create possibility for manual user mapping
+        // if no match is found, the id needs to be mapped manually
         throw new ManualMappingRequiredException(externalStudentInfo);
     }
 
@@ -336,6 +357,57 @@ public class GradingService {
         }
 
         sink.next(retrievedUserInfos);
+    }
+
+    public List<String> saveStudentMappings(final UUID courseId, final List<StudentMappingInput> studentMappingInputs, final LoggedInUser currentUser) {
+        try {
+            validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
+        } catch (final NoAccessToCourseException ex) {
+            return null;
+        }
+
+        // deletes all the external ids that have just been mapped from the manualMappingInstance-repo
+        List<String> externalStudentIdList = studentMappingInputs.stream().map(StudentMappingInput::getExternalStudentId).toList();
+        manualMappingInstanceRepository.deleteAllById(externalStudentIdList);
+
+        // saves the new student mappings to the studentMapping-repo
+        List<StudentMappingEntity> entityList = new ArrayList<>();
+        for (final StudentMappingInput studentMappingInput : studentMappingInputs) {
+            entityList.add(assignmentMapper.studentMappingInputToEntity(studentMappingInput));
+        }
+        studentMappingRepository.saveAll(entityList);
+
+        // retries parsing all unfinishedGradingEntities
+        List<UnfinishedGradingEntity> unfinishedGradingEntityList = unfinishedGradingRepository.findAll();
+        for (final UnfinishedGradingEntity unfinishedGradingEntity : unfinishedGradingEntityList) {
+            JSONObject jsonObject = new JSONObject(unfinishedGradingEntity.getGradingJson());
+            AssignmentEntity assignmentEntity = assignmentService.requireAssignmentExists(unfinishedGradingEntity.getId().getAssignmentId());
+
+            try {
+                GradingEntity gradingEntity = parseIntoGradingEntity(jsonObject, assignmentEntity);
+                gradingRepository.save(gradingEntity);
+                logGradingImported(gradingEntity);
+                unfinishedGradingRepository.deleteById(unfinishedGradingEntity.getId());
+            } catch (ManualMappingRequiredException e) {
+                // should not happen, because all mappings should be done at this instance
+            }
+
+        }
+
+        // returns all the newly mapped external student ids
+        return externalStudentIdList;
+    }
+
+    public List<ManualMappingInstance> getManualMappingInstances(final UUID courseId, final LoggedInUser currentUser) {
+        try {
+            validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
+        } catch (final NoAccessToCourseException ex) {
+            return null;
+        }
+
+        List<ManualMappingInstanceEntity> entityList = manualMappingInstanceRepository.findAll();
+
+        return entityList.stream().map(assignmentMapper::manualMappingInstanceEntityToDto).toList();
     }
 
     /**

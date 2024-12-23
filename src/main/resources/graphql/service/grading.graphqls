@@ -78,3 +78,59 @@ type StudentMapping {
     """
     externalStudentId: String!
 }
+
+input StudentMappingInput {
+    """
+    Student Id in Meitrex
+    """
+    meitrexStudentId: UUID!
+
+    """
+    Student Id in external system like TMS
+    """
+    externalStudentId: String!
+}
+
+"""
+An object to represent a student where the backend could not automatically map the external student to a meitrex user.
+"""
+type ManualMappingInstance {
+    """
+    Student Id in external system like TMS
+    """
+    externalStudentId: String!
+
+    """
+    JSON Object containing all available information on the external student.
+    """
+    externalStudentInfo: String!
+}
+
+
+"""
+An Unfinished Grading is created, when importing and parsing gradings from external systems like TMS goes wrong
+because the student id has to be mapped manually.
+After an admin mapped ids manually, these unfinished gradings will be tried again.
+"""
+type UnfinishedGrading {
+    """
+    Student Id in external system like TMS
+    """
+    externalStudentId: String!
+
+    """
+    Assignment/HandIn id in MEITREX
+    """
+    assignmentId: UUID!
+
+    """
+    JSON representation of the grading
+    """
+    gradingJson: String!
+
+    """
+    The number of times importing and parsing was tried. Might be useful for detecting and manually deleting broken gradings.
+    """
+    numberOfTries: Int!
+}
+

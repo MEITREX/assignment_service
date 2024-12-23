@@ -19,8 +19,14 @@ type Query {
     """
     Gets all the available external exercises.
     CourseId is the id of the course the user is currently working is.
-    🔒 The user must be an admin in the course. Otherwise null is returned for
-    an assignment if the user has no access to it.
+    🔒 The user must be an admin in the course. Otherwise null is returned.
     """
     getExternalAssignments(courseId: UUID!): [ExternalAssignment!]!
+
+
+    """
+    Gets all manual student mappings, i.e. all students where the backend could not map to a meitrex user.
+    🔒 The user must be an admin in the course. Otherwise null is returned.
+    """
+    getManualMappingInstances(courseId: UUID!): [ManualMappingInstance]!
 }

@@ -119,4 +119,12 @@ public class AssignmentMapper {
         return mappedSubexerciseGrading;
     }
 
+
+    public StudentMappingEntity studentMappingInputToEntity(final StudentMappingInput studentMappingInput) {
+        return modelMapper.map(studentMappingInput, StudentMappingEntity.class);
+    }
+
+    public ManualMappingInstance manualMappingInstanceEntityToDto(final ManualMappingInstanceEntity manualMappingInstanceEntity) {
+        return modelMapper.map(manualMappingInstanceEntity, ManualMappingInstance.class);
+    }
 }

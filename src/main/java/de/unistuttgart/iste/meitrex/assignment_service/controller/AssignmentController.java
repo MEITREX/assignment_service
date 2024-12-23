@@ -53,6 +53,11 @@ public class AssignmentController {
         return gradingService.getExternalAssignments(courseId, currentUser);
     }
 
+    @QueryMapping
+    public List<ManualMappingInstance> getManualMappingInstances(@Argument final UUID courseId, @ContextValue final LoggedInUser currentUser) {
+        return gradingService.getManualMappingInstances(courseId, currentUser);
+    }
+
     /* Mutation Mappings */
 
     @MutationMapping(name = "_internal_noauth_createAssignment")
@@ -70,6 +75,13 @@ public class AssignmentController {
     @MutationMapping
     public AssignmentCompletedFeedback logAssignmentCompleted(@Argument LogAssignmentCompletedInput input, @ContextValue final LoggedInUser currentUser) {
         return assignmentService.logAssignmentCompleted(input, currentUser);
+    }
+
+    @MutationMapping
+    public List<String> saveStudentMappings(@Argument final UUID courseId,
+                                          @Argument final List<StudentMappingInput> studentMappingInputs,
+                                          @ContextValue final LoggedInUser currentUser) {
+        return gradingService.saveStudentMappings(courseId, studentMappingInputs, currentUser);
     }
 
     /* Schema Mappings */
