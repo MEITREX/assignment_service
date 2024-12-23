@@ -1,6 +1,7 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service;
 
 
+import de.unistuttgart.iste.meitrex.assignment_service.exception.ManualMappingRequiredException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.*;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
@@ -16,6 +17,8 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.graphql.client.GraphQlClient;
+import org.springframework.graphql.client.ClientGraphQlResponse;
+import reactor.core.publisher.SynchronousSink;
 import org.springframework.stereotype.Service;
 import org.json.*;
 
@@ -86,9 +89,9 @@ public class GradingService {
             body = response.join();
         }
 
-        List<GradingEntity> gradingEntities = parseStringIntoGradingEntityList(body, assignment);
+        List<GradingEntity> gradingEntityList = parseStringIntoGradingEntityList(body, assignment);
 
-        for (GradingEntity gradingEntity : gradingEntities) {
+        for (GradingEntity gradingEntity : gradingEntityList) {
             gradingRepository.save(gradingEntity);
             logGradingImported(gradingEntity);
         }
@@ -105,9 +108,12 @@ public class GradingService {
     private List<GradingEntity> parseStringIntoGradingEntityList(final String string, final AssignmentEntity assignmentEntity) {
         JSONArray gradingArray = new JSONArray(string);
         final List<GradingEntity> gradingEntityList = new ArrayList<>(gradingArray.length());
-
+        GradingEntity gradingEntity;
         for (int i = 0; i < gradingArray.length(); i++) {
-            gradingEntityList.add(parseIntoGradingEntity(gradingArray.getJSONObject(i), assignmentEntity));
+            gradingEntity = parseIntoGradingEntity(gradingArray.getJSONObject(i), assignmentEntity);
+            if (gradingEntity != null) {
+                gradingEntityList.add(gradingEntity);
+            }
         }
         return gradingEntityList;
     }
@@ -123,7 +129,13 @@ public class GradingService {
         final GradingEntity gradingEntity = new GradingEntity();
 
         String externalStudentId = jsonObject.getString("studentId"); // TODO match this to Meitrex student id
-        UUID studentId = getStudentIdFromExternalStudentId(externalStudentId);
+        UUID studentId;
+        try {
+            studentId = getStudentIdFromExternalStudentId(externalStudentId);
+        } catch (ManualMappingRequiredException e) {
+            manualMappingInstanceRepository.save(e.getExternalStudentInfo());
+            return null;
+        }
 
         JSONObject gradingData = jsonObject.getJSONObject("gradingData");
 
@@ -227,27 +239,103 @@ public class GradingService {
         topicPublisher.notifyUserWorkedOnContent(userProgressLogEvent);
     }
 
-    private UUID getStudentIdFromExternalStudentId(final String externalStudentId) {
+    private UUID getStudentIdFromExternalStudentId(final String externalStudentId) throws ManualMappingRequiredException {
         Optional<StudentMappingEntity> studentMappingEntity = studentMappingRepository.findById(externalStudentId);
         if (studentMappingEntity.isPresent()) {
             return studentMappingEntity.get().getMeitrexStudentId();
         }
-        return findNewStudentMapping(externalStudentId);
+        UUID newMeitrexStudentId = findNewStudentIdFromExternalStudentId(externalStudentId);
+        studentMappingRepository.save(new StudentMappingEntity(externalStudentId, newMeitrexStudentId));
+        return newMeitrexStudentId;
     }
 
-    private UUID findNewStudentMapping(final String externalStudentId) {
+    private UUID findNewStudentIdFromExternalStudentId(final String externalStudentId) throws ManualMappingRequiredException {
         JSONObject externalStudentInfo = getExternalStudentInfo(externalStudentId);
-        Map<String, String> meitrexStudentInfo = getMeitrexStudentInfo(externalStudentInfo);
+        List<Map<String, Object>> meitrexStudentInfoList = getMeitrexStudentInfoList();
 
-        return UUID.nameUUIDFromBytes("this needs to be changed".getBytes());
+        Object lastName = externalStudentInfo.get("lastname");
+        Object firstName = externalStudentInfo.get("firstname");
+
+        // filter by last name
+        List<Map<String,Object>> filteredByLastName = meitrexStudentInfoList.stream()
+                .filter(userInfo -> userInfo.get("lastName").equals(lastName))
+                .toList();
+        if (filteredByLastName.isEmpty()) {
+            throw new IllegalArgumentException("No matching student found!"); // TODO create better exception
+        } else if (filteredByLastName.size() == 1) {
+            return (UUID) filteredByLastName.getFirst().get("id");
+        }
+
+        // filter by first name, if there are still multiple candidates
+        List<Map<String,Object>> filteredByFirstName = filteredByLastName.stream()
+                .filter(userInfo -> userInfo.get("firstName").equals(firstName))
+                .toList();
+        if (filteredByFirstName.isEmpty()) {
+            throw new IllegalArgumentException("No matching student found!"); // TODO create better exception
+        } else if (filteredByFirstName.size() == 1) {
+            return (UUID) filteredByFirstName.getFirst().get("id");
+        }
+
+        // filter by more attributes like email, matriculation number etc if there are still more candidates
+
+        // create possibility for manual user mapping
+        throw new ManualMappingRequiredException(externalStudentInfo);
     }
 
     private JSONObject getExternalStudentInfo(final String externalStudentId) {
-        return null;
+        String body;
+        CompletableFuture<String> response;
+        try (HttpClient client = HttpClient.newBuilder().build()) {
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(basePath + "api/student/" + externalStudentId))
+                    //.header("Authorization", "Basic " + Base64.getEncoder().encodeToString("username:password".getBytes()))
+                    .header("Cookie", "connect.sid=" + authToken)
+                    .build();
+            response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
+            body = response.join();
+        }
+
+        // TODO create better exception
+        if (body == null) throw new IllegalArgumentException("Querying external student info for externalStudentId %s went wrong.".formatted(externalStudentId));
+
+        return new JSONObject(body);
     }
 
-    private Map<String, String> getMeitrexStudentInfo(final JSONObject externalStudentInfo) {
-        return null; // something like result.field(queryName + "[0]").getValue()
+
+    // TODO this whole thing should be in userService rather than here
+    private List<Map<String, Object>> getMeitrexStudentInfoList() {
+        String query = "findAllUserInfos"; // TODO doesn't exist currently
+        String queryName = "findAllUserInfos";
+        List<Map<String, Object>> meitrexStudentInfo = userServiceClient.document(query)
+                .execute()
+                .handle((ClientGraphQlResponse result, SynchronousSink<List<Map<String, Object>>> sink)
+                        -> handleGraphQlResponse(result, sink, queryName))
+                .retry(3)
+                .block();
+
+        if (meitrexStudentInfo == null) {
+            throw new IllegalStateException("Error fetching userInfo from UserService"); // TODO create better exception
+        }
+
+        return meitrexStudentInfo;
+    }
+
+    private void handleGraphQlResponse(final ClientGraphQlResponse result, final SynchronousSink<List<Map<String, Object>>> sink, final String queryName) {
+        if (!result.isValid()) {
+            sink.error(new Exception(result.getErrors().toString())); // TODO create better exception
+            return;
+        }
+
+        List<Map<String, Object>> retrievedUserInfos = result.field(queryName).getValue();
+
+        if (retrievedUserInfos == null) {
+            sink.error(new Exception("Error fetching userInfo from UserService: Missing field in response.")); // TODO create better exception
+            return;
+        }
+        if (retrievedUserInfos.isEmpty()) {
+            sink.error(new Exception("Error fetching userInfo from UserService: Field in response is empty.")); // TODO create better exception
+        }
+
+        sink.next(retrievedUserInfos);
     }
 
     /**
