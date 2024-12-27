@@ -41,6 +41,10 @@ public class UnfinishedGradingEntity implements IWithId<UnfinishedGradingEntity.
         return primaryKey;
     }
 
+    public void incrementNumberOfTries() {
+        numberOfTries++;
+    }
+
     public static UnfinishedGradingEntity fromJson(JSONObject gradingJson, UUID assignmentId) {
         String studentId = gradingJson.getString("studentId");
         return new UnfinishedGradingEntity(new PrimaryKey(studentId, assignmentId), gradingJson.toString(), 0);

@@ -24,8 +24,9 @@ type Mutation {
 
     """
     Saves mappings of meitrex users to external students.
-    Response to ManualMappingInstances.
+    Used to deal with ManualMappingInstances.
     Returns list of all deleted ManualMappingInstance ids.
+    Returns null if connection to UserService failed.
     🔒 The user must be an admin in the course to perform this action.
     """
     saveStudentMappings(courseId: UUID!, studentMappingInputs: [StudentMappingInput!]!): [String]!
