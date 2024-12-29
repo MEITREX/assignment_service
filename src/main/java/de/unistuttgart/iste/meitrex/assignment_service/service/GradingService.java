@@ -1,7 +1,9 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service;
 
 
-import de.unistuttgart.iste.meitrex.assignment_service.exception.*;
+import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
+import de.unistuttgart.iste.meitrex.assignment_service.exception.ManualMappingRequiredException;
+import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.*;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
@@ -18,9 +20,6 @@ import de.unistuttgart.iste.meitrex.generated.dto.*;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.graphql.client.GraphQlClient;
-import org.springframework.graphql.client.ClientGraphQlResponse;
-import reactor.core.publisher.SynchronousSink;
 import org.springframework.stereotype.Service;
 import org.json.*;
 
@@ -47,7 +46,8 @@ public class GradingService {
     private final ManualMappingInstanceRepository manualMappingInstanceRepository;
     private final UnfinishedGradingRepository unfinishedGradingRepository;
 
-    private final GraphQlClient userServiceClient;
+    private final UserServiceClient userServiceClient;
+    private final CourseServiceClient courseServiceClient;
 
     // these need to be set!
     private static final String authToken = "";
@@ -100,7 +100,7 @@ public class GradingService {
             // return; TODO return or throw wrapped exception?
         }
 
-        final List<Map<String, Object>> meitrexStudentInfoList;
+        final List<UserInfo> meitrexStudentInfoList;
         try {
             meitrexStudentInfoList = getMeitrexStudentInfoList();
         } catch (UserServiceConnectionException e){
@@ -124,7 +124,7 @@ public class GradingService {
      * @param assignmentEntity the assignment id which the gradings belong to
      * @return List of parsed grading entities
      */
-    private List<GradingEntity> parseStringIntoGradingEntityList(final String string, final AssignmentEntity assignmentEntity, final List<Map<String, Object>> meitrexStudentInfoList) {
+    private List<GradingEntity> parseStringIntoGradingEntityList(final String string, final AssignmentEntity assignmentEntity, final List<UserInfo> meitrexStudentInfoList) {
         JSONArray gradingArray = new JSONArray(string);
         final List<GradingEntity> gradingEntityList = new ArrayList<>(gradingArray.length());
         GradingEntity gradingEntity;
@@ -149,7 +149,7 @@ public class GradingService {
      * @param assignmentEntity the assignment id which the grading belongs to
      * @return parsed grading entity
      */
-    private GradingEntity parseIntoGradingEntity(final JSONObject jsonObject, final AssignmentEntity assignmentEntity, final List<Map<String, Object>> meitrexStudentInfoList) throws ManualMappingRequiredException, ExternalPlatformConnectionException {
+    private GradingEntity parseIntoGradingEntity(final JSONObject jsonObject, final AssignmentEntity assignmentEntity, final List<UserInfo> meitrexStudentInfoList) throws ManualMappingRequiredException, ExternalPlatformConnectionException {
         final GradingEntity gradingEntity = new GradingEntity();
 
         String externalStudentId = jsonObject.getString("studentId"); // TODO match this to Meitrex student id
@@ -287,7 +287,7 @@ public class GradingService {
         topicPublisher.notifyUserWorkedOnContent(userProgressLogEvent);
     }
 
-    private UUID getStudentIdFromExternalStudentId(final String externalStudentId, final List<Map<String, Object>> meitrexStudentInfoList) throws ManualMappingRequiredException, ExternalPlatformConnectionException {
+    private UUID getStudentIdFromExternalStudentId(final String externalStudentId, final List<UserInfo> meitrexStudentInfoList) throws ManualMappingRequiredException, ExternalPlatformConnectionException {
         Optional<StudentMappingEntity> studentMappingEntity = studentMappingRepository.findById(externalStudentId);
         if (studentMappingEntity.isPresent()) {
             return studentMappingEntity.get().getMeitrexStudentId();
@@ -297,33 +297,33 @@ public class GradingService {
         return newMeitrexStudentId;
     }
 
-    private UUID findNewStudentIdFromExternalStudentId(final String externalStudentId, final List<Map<String, Object>> meitrexStudentInfoList) throws ManualMappingRequiredException, ExternalPlatformConnectionException {
+    private UUID findNewStudentIdFromExternalStudentId(final String externalStudentId, final List<UserInfo> meitrexStudentInfoList) throws ManualMappingRequiredException, ExternalPlatformConnectionException {
         JSONObject externalStudentInfo = getExternalStudentInfo(externalStudentId);
 
         // list is fetched from user service at the beginning, rather than for each grading
-        // final List<Map<String, Object>> meitrexStudentInfoList = getMeitrexStudentInfoList();
+        // final List<UserInfo> meitrexStudentInfoList = getMeitrexStudentInfoList();
 
         Object lastName = externalStudentInfo.get("lastname");
         Object firstName = externalStudentInfo.get("firstname");
 
         // filter by last name
-        List<Map<String,Object>> filteredByLastName = meitrexStudentInfoList.stream()
-                .filter(userInfo -> userInfo.get("lastName").equals(lastName))
+        List<UserInfo> filteredByLastName = meitrexStudentInfoList.stream()
+                .filter(userInfo -> userInfo.getLastName().equals(lastName))
                 .toList();
         if (filteredByLastName.isEmpty()) {
             throw new ManualMappingRequiredException(externalStudentInfo);
         } else if (filteredByLastName.size() == 1) {
-            return (UUID) filteredByLastName.getFirst().get("id");
+            return (UUID) filteredByLastName.getFirst().getId();
         }
 
         // filter by first name, if there are still multiple candidates
-        List<Map<String,Object>> filteredByFirstName = filteredByLastName.stream()
-                .filter(userInfo -> userInfo.get("firstName").equals(firstName))
+        List<UserInfo> filteredByFirstName = filteredByLastName.stream()
+                .filter(userInfo -> userInfo.getFirstName().equals(firstName))
                 .toList();
         if (filteredByFirstName.isEmpty()) {
             throw new ManualMappingRequiredException(externalStudentInfo);
         } else if (filteredByFirstName.size() == 1) {
-            return (UUID) filteredByFirstName.getFirst().get("id");
+            return (UUID) filteredByFirstName.getFirst().getId();
         }
 
         // filter by more attributes like email, matriculation number etc. if there are still more candidates
@@ -351,41 +351,15 @@ public class GradingService {
 
 
     // TODO this whole thing should be in userService rather than here
-    private List<Map<String, Object>> getMeitrexStudentInfoList() throws UserServiceConnectionException {
-        String query = "findAllUserInfos"; // TODO doesn't exist currently
-        String queryName = "findAllUserInfos";
-        List<Map<String, Object>> meitrexStudentInfoList = userServiceClient.document(query)
-                .execute()
-                .handle((ClientGraphQlResponse result, SynchronousSink<List<Map<String, Object>>> sink)
-                        -> handleGraphQlResponse(result, sink, queryName))
-                .retry(3)
-                .block();
+    private List<UserInfo> getMeitrexStudentInfoList() throws UserServiceConnectionException {
 
-        if (meitrexStudentInfoList == null) {
-            throw new UserServiceConnectionException("Error fetching userInfo from UserService");
-        }
+        final List<UUID> userIds = courseServiceClient.queryUserIds(); // TODO needs to be queried from course service
+
+        final List<UserInfo> meitrexStudentInfoList = userServiceClient.queryUserInfos(userIds);
 
         return meitrexStudentInfoList;
     }
 
-    private void handleGraphQlResponse(final ClientGraphQlResponse result, final SynchronousSink<List<Map<String, Object>>> sink, final String queryName) {
-        if (!result.isValid()) {
-            sink.error(new UserServiceConnectionException(result.getErrors().toString()));
-            return;
-        }
-
-        List<Map<String, Object>> retrievedUserInfos = result.field(queryName).getValue();
-
-        if (retrievedUserInfos == null) {
-            sink.error(new UserServiceConnectionException("Error fetching userInfo from UserService: Missing field in response."));
-            return;
-        }
-        if (retrievedUserInfos.isEmpty()) {
-            sink.error(new UserServiceConnectionException("Error fetching userInfo from UserService: Field in response is empty."));
-        }
-
-        sink.next(retrievedUserInfos);
-    }
 
     public List<String> saveStudentMappings(final UUID courseId, final List<StudentMappingInput> studentMappingInputs, final LoggedInUser currentUser) {
         try {
@@ -406,7 +380,7 @@ public class GradingService {
         studentMappingRepository.saveAll(entityList);
 
         // retries parsing all unfinishedGradingEntities
-        final List<Map<String, Object>> meitrexStudentInfoList;
+        final List<UserInfo> meitrexStudentInfoList;
         try {
             meitrexStudentInfoList = getMeitrexStudentInfoList();
         } catch (UserServiceConnectionException e){
