@@ -4,6 +4,7 @@ package de.unistuttgart.iste.meitrex.assignment_service.service;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ManualMappingRequiredException;
 import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
+import de.unistuttgart.iste.meitrex.course_service.exception.CourseServiceConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.*;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
@@ -103,7 +104,7 @@ public class GradingService {
         final List<UserInfo> meitrexStudentInfoList;
         try {
             meitrexStudentInfoList = getMeitrexStudentInfoList();
-        } catch (UserServiceConnectionException e){
+        } catch (UserServiceConnectionException | CourseServiceConnectionException e){
             throw new RuntimeException(e); // wrapping exception
             // return; TODO return or throw wrapped exception?
         }
@@ -349,12 +350,10 @@ public class GradingService {
         return new JSONObject(body);
     }
 
+    private List<UserInfo> getMeitrexStudentInfoList() throws UserServiceConnectionException, CourseServiceConnectionException {
 
-    // TODO this whole thing should be in userService rather than here
-    private List<UserInfo> getMeitrexStudentInfoList() throws UserServiceConnectionException {
-
-        final List<UUID> userIds = courseServiceClient.queryUserIds(); // TODO needs to be queried from course service
-
+        final List<CourseMembership> userMemberships = courseServiceClient.queryMembershipsInCourse();
+        List<UUID> userIds = userMemberships.stream().map(CourseMembership::getUserId).toList();
         final List<UserInfo> meitrexStudentInfoList = userServiceClient.queryUserInfos(userIds);
 
         return meitrexStudentInfoList;
@@ -383,7 +382,7 @@ public class GradingService {
         final List<UserInfo> meitrexStudentInfoList;
         try {
             meitrexStudentInfoList = getMeitrexStudentInfoList();
-        } catch (UserServiceConnectionException e){
+        } catch (UserServiceConnectionException | CourseServiceConnectionException e){
             throw new RuntimeException(e); // wrapping exception
             // return null; TODO return null or throw wrapped exception?
         }
