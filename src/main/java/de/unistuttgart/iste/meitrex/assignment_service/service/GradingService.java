@@ -1,6 +1,7 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service;
 
 
+import de.unistuttgart.iste.meitrex.assignment_service.config.ExternalSystemConfiguration;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ManualMappingRequiredException;
 import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
@@ -50,9 +51,8 @@ public class GradingService {
     private final UserServiceClient userServiceClient;
     private final CourseServiceClient courseServiceClient;
 
-    // these need to be set!
-    private static final String authToken = "";
-    private static final String basePath = "";
+    private final ExternalSystemConfiguration externalSystemConfiguration;
+
 
     public Grading getGradingForAssignmentForStudent(final UUID assignmentId, final UUID studentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId); // throws EntityNotFoundException "Assignment with assessmentId %s not found"
@@ -86,9 +86,9 @@ public class GradingService {
         String body;
         CompletableFuture<String> response;
         try (HttpClient client = HttpClient.newBuilder().build()) {
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(basePath + "api/grading/handIn/" + externalId))
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(externalSystemConfiguration.getBasePath() + "api/grading/handIn/" + externalId))
                     //.header("Authorization", "Basic " + Base64.getEncoder().encodeToString("username:password".getBytes()))
-                    .header("Cookie", "connect.sid=" + authToken)
+                    .header("Cookie", "connect.sid=" + externalSystemConfiguration.getAuthToken())
                     .build();
             response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
             body = response.join();
@@ -337,9 +337,9 @@ public class GradingService {
         String body;
         CompletableFuture<String> response;
         try (HttpClient client = HttpClient.newBuilder().build()) {
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(basePath + "api/student/" + externalStudentId))
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(externalSystemConfiguration.getBasePath() + "api/student/" + externalStudentId))
                     //.header("Authorization", "Basic " + Base64.getEncoder().encodeToString("username:password".getBytes()))
-                    .header("Cookie", "connect.sid=" + authToken)
+                    .header("Cookie", "connect.sid=" + externalSystemConfiguration.getAuthToken())
                     .build();
             response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
             body = response.join();
@@ -439,9 +439,9 @@ public class GradingService {
         String body;
         CompletableFuture<String> response;
         try (HttpClient client = HttpClient.newBuilder().build()) {
-            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(basePath + "api/sheet"))
+            HttpRequest request = HttpRequest.newBuilder().uri(URI.create(externalSystemConfiguration.getBasePath() + "api/sheet"))
                     //.header("Authorization", "Basic " + Base64.getEncoder().encodeToString("username:password".getBytes()))
-                    .header("Cookie", "connect.sid=" + authToken)
+                    .header("Cookie", "connect.sid=" + externalSystemConfiguration.getAuthToken())
                     .build();
             response = client.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(HttpResponse::body);
             body = response.join();
