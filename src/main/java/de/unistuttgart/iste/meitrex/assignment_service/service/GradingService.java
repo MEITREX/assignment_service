@@ -53,7 +53,15 @@ public class GradingService {
 
     private final ExternalSystemConfiguration externalSystemConfiguration;
 
-
+    /**
+     * Returns a grading for the given student on the given assignment.
+     *
+     * @param assignmentId meitrex id of the assignment
+     * @param studentId meitrex id of the student
+     * @param currentUser the current logged-in user
+     * @return a grading for the student on the assignment, null if user has no access
+     * @throws EntityNotFoundException if assignment with given id or grading doesn't exist
+     */
     public Grading getGradingForAssignmentForStudent(final UUID assignmentId, final UUID studentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId); // throws EntityNotFoundException "Assignment with assessmentId %s not found"
         try {
@@ -68,9 +76,9 @@ public class GradingService {
     }
 
     /**
-     * Handles importing all gradings for one assignment from TMS.
+     * Handles importing all gradings for one assignment from the external system (TMS).
      * <br><br>
-     * All gradings for one assignment are requested from TMS via HTTP. The response is parsed to gradingEntities. <br>
+     * All gradings for one assignment are requested from the external system (TMS) via HTTP. The response is parsed to gradingEntities. <br>
      * These gradingEntities are saved in the grading repository. <br>
      * A contentProgressedEvent is published for each grading (i.e. each student).
      *
@@ -80,6 +88,14 @@ public class GradingService {
     public void importGradingsForAssignment(final UUID assignmentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId); // throws EntityNotFoundException "Assignment with assessmentId %s not found"
         validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, assignment.getCourseId());
+
+        final List<UserInfo> meitrexStudentInfoList;
+        try {
+            meitrexStudentInfoList = getMeitrexStudentInfoList(assignment.getCourseId());
+        } catch (UserServiceConnectionException | CourseServiceConnectionException e){
+            throw new RuntimeException(e); // wrapping exception
+            // return; TODO return or throw wrapped exception?
+        }
 
         String externalId = assignment.getExternalId();
 
@@ -101,14 +117,6 @@ public class GradingService {
             // return; TODO return or throw wrapped exception?
         }
 
-        final List<UserInfo> meitrexStudentInfoList;
-        try {
-            meitrexStudentInfoList = getMeitrexStudentInfoList();
-        } catch (UserServiceConnectionException | CourseServiceConnectionException e){
-            throw new RuntimeException(e); // wrapping exception
-            // return; TODO return or throw wrapped exception?
-        }
-
         List<GradingEntity> gradingEntityList = parseStringIntoGradingEntityList(body, assignment, meitrexStudentInfoList);
 
         for (GradingEntity gradingEntity : gradingEntityList) {
@@ -123,6 +131,7 @@ public class GradingService {
      *
      * @param string JSON Array containing a list of TMS-gradings
      * @param assignmentEntity the assignment id which the gradings belong to
+     * @param meitrexStudentInfoList list of all user infos, passed down for matching ids
      * @return List of parsed grading entities
      */
     private List<GradingEntity> parseStringIntoGradingEntityList(final String string, final AssignmentEntity assignmentEntity, final List<UserInfo> meitrexStudentInfoList) {
@@ -145,9 +154,13 @@ public class GradingService {
 
     /**
      * Parses a single JSON Object into a grading entity.
+     * <br>
+     * If the grading can't be imported because ids can't be mapped or the connection to the external system failed,
+     * the grading will be skipped and tried again later.
      *
      * @param jsonObject JSON Object containing a single TMS-grading
      * @param assignmentEntity the assignment id which the grading belongs to
+     * @param meitrexStudentInfoList list of all user infos, passed down for matching ids
      * @return parsed grading entity
      */
     private GradingEntity parseIntoGradingEntity(final JSONObject jsonObject, final AssignmentEntity assignmentEntity, final List<UserInfo> meitrexStudentInfoList) throws ManualMappingRequiredException, ExternalPlatformConnectionException {
@@ -222,6 +235,16 @@ public class GradingService {
         return gradingEntity;
     }
 
+
+    /**
+     * If a grading could not be imported (e.g. because the corresponding meitrex user could not be found),
+     * it is added to the unfinished grading repository, so that it can be tried again later. <br>
+     * Also increments the number of tries, if the grading has been tried before.
+     *
+     * @param jsonObject JSON Object representing a grading (the way it was received from the external system)
+     * @param assignmentEntity meitrex assignment entity for which the grading is
+     * @param externalStudentId external student id for whom the grading is
+     */
     private void addToUnfinishedGradingRepository(final JSONObject jsonObject, final AssignmentEntity assignmentEntity, final String externalStudentId) {
         // Grading is added to unfinished grading repository, so that it can be tried again, when a manual mapping was done.
         UnfinishedGradingEntity unfinishedGradingEntity;
@@ -288,6 +311,19 @@ public class GradingService {
         topicPublisher.notifyUserWorkedOnContent(userProgressLogEvent);
     }
 
+    /**
+     * Tries to get the corresponding meitrex student id for a given external student id. <br>
+     * Case 1: A student mapping is found: the id is returned. <br>
+     * Case 2: No student mapping is found: tries to find a new matching id for the external id: <br>
+     * - finds new id: meitrex id is found <br>
+     * - can't find new id: throws ManualMappingRequiredException, so that an admin will map <br>
+     *
+     * @param externalStudentId external id of the student
+     * @param meitrexStudentInfoList list of all user infos
+     * @return meitrex id if it is found
+     * @throws ManualMappingRequiredException if no matching id could be found
+     * @throws ExternalPlatformConnectionException if connection to the external system failed
+     */
     private UUID getStudentIdFromExternalStudentId(final String externalStudentId, final List<UserInfo> meitrexStudentInfoList) throws ManualMappingRequiredException, ExternalPlatformConnectionException {
         Optional<StudentMappingEntity> studentMappingEntity = studentMappingRepository.findById(externalStudentId);
         if (studentMappingEntity.isPresent()) {
@@ -298,6 +334,21 @@ public class GradingService {
         return newMeitrexStudentId;
     }
 
+    /**
+     * Tries to match a meitrex user to the given external student. <br>
+     * Gets all infos on external student and filters meitrexStudentInfoList for these properties. <br>
+     * - last name <br>
+     * - first name <br>
+     * - future: email, ... <br>
+     *
+     * If no unique match is found, a ManualMappingRequiredException is thrown, so that an admin will map.
+     *
+     * @param externalStudentId external id of the student
+     * @param meitrexStudentInfoList list of all user infos in meitrex
+     * @return meitrex id of the student
+     * @throws ManualMappingRequiredException if no or multiple matching students could be found
+     * @throws ExternalPlatformConnectionException if connection to the external system fails
+     */
     private UUID findNewStudentIdFromExternalStudentId(final String externalStudentId, final List<UserInfo> meitrexStudentInfoList) throws ManualMappingRequiredException, ExternalPlatformConnectionException {
         JSONObject externalStudentInfo = getExternalStudentInfo(externalStudentId);
 
@@ -333,6 +384,15 @@ public class GradingService {
         throw new ManualMappingRequiredException(externalStudentInfo);
     }
 
+    /**
+     * Gets all infos on student from external system. <br>
+     * Contains at least: last name, first name <br>
+     * Optional: email, matriculation number
+     *
+     * @param externalStudentId external id of the student
+     * @return JSON Object containing all available information
+     * @throws ExternalPlatformConnectionException if connection to external system fails
+     */
     private JSONObject getExternalStudentInfo(final String externalStudentId) throws ExternalPlatformConnectionException {
         String body;
         CompletableFuture<String> response;
@@ -350,9 +410,17 @@ public class GradingService {
         return new JSONObject(body);
     }
 
-    private List<UserInfo> getMeitrexStudentInfoList() throws UserServiceConnectionException, CourseServiceConnectionException {
+    /**
+     * Gets all user infos on all users in the course of the assignment. <br>
+     * First gets all ids in the course. Then gets all user infos on these ids.
+     *
+     * @return list of user infos on all users in the course
+     * @throws CourseServiceConnectionException if something went wrong querying user ids in the course
+     * @throws UserServiceConnectionException if something went wrong querying user infos
+     */
+    private List<UserInfo> getMeitrexStudentInfoList(final UUID courseId) throws CourseServiceConnectionException, UserServiceConnectionException {
 
-        final List<CourseMembership> userMemberships = courseServiceClient.queryMembershipsInCourse();
+        final List<CourseMembership> userMemberships = courseServiceClient.queryMembershipsInCourse(courseId);
         List<UUID> userIds = userMemberships.stream().map(CourseMembership::getUserId).toList();
         final List<UserInfo> meitrexStudentInfoList = userServiceClient.queryUserInfos(userIds);
 
@@ -360,6 +428,15 @@ public class GradingService {
     }
 
 
+    /**
+     * Saves all manually created student mappings to the repository.
+     * Then tries parsing unfinished gradings for which the assignment is in the given course.
+     *
+     * @param courseId id of the course the mappings are in
+     * @param studentMappingInputs inputs for student mappings
+     * @param currentUser current logged-in user
+     * @return returns all the newly mapped external student ids (without purpose)
+     */
     public List<String> saveStudentMappings(final UUID courseId, final List<StudentMappingInput> studentMappingInputs, final LoggedInUser currentUser) {
         try {
             validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
@@ -378,13 +455,29 @@ public class GradingService {
         }
         studentMappingRepository.saveAll(entityList);
 
-        // retries parsing all unfinishedGradingEntities
+        // first only the ones in the course are tried
+        // mainly because it's faster
+        // but also because an admin might be able to match more students in the current course
+        retryUnfinishedGradingsInCourse(courseId);
+        // then all remaining
+        retryAllUnfinishedGradings();
+
+        // returns all the newly mapped external student ids (with no real purpose, only because graphql doesn't allow void)
+        return externalStudentIdList;
+    }
+
+    /**
+     * Retries parsing unfinishedGradingEntities in the given course
+     * @param courseId the current course
+     */
+    private void retryUnfinishedGradingsInCourse(UUID courseId) {
+        // retries parsing unfinishedGradingEntities in the current course
         final List<UserInfo> meitrexStudentInfoList;
         try {
-            meitrexStudentInfoList = getMeitrexStudentInfoList();
+            meitrexStudentInfoList = getMeitrexStudentInfoList(courseId);
         } catch (UserServiceConnectionException | CourseServiceConnectionException e){
-            throw new RuntimeException(e); // wrapping exception
-            // return null; TODO return null or throw wrapped exception?
+            // throw new RuntimeException(e); // wrapping exception
+            return; // TODO return or throw wrapped exception?
         }
 
         List<UnfinishedGradingEntity> unfinishedGradingEntityList = unfinishedGradingRepository.findAll();
@@ -392,23 +485,62 @@ public class GradingService {
             JSONObject jsonObject = new JSONObject(unfinishedGradingEntity.getGradingJson());
             AssignmentEntity assignmentEntity = assignmentService.requireAssignmentExists(unfinishedGradingEntity.getId().getAssignmentId());
 
+            if (assignmentEntity.getCourseId().equals(courseId)) {
+                try {
+                    // throws the caught exceptions
+                    GradingEntity gradingEntity = parseIntoGradingEntity(jsonObject, assignmentEntity, meitrexStudentInfoList);
+                    // should not throw anything
+                    gradingRepository.save(gradingEntity);
+                    logGradingImported(gradingEntity);
+                    unfinishedGradingRepository.deleteById(unfinishedGradingEntity.getId());
+                } catch (ManualMappingRequiredException | ExternalPlatformConnectionException e){
+                    // if something goes wrong, unfinished gradings will be added to repo again
+                    unfinishedGradingEntity.incrementNumberOfTries();
+                    unfinishedGradingRepository.save(unfinishedGradingEntity);
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Retries parsing all unfinished gradings.
+     * Might be slow because user infos need to be queried for every grading.
+     */
+    private void retryAllUnfinishedGradings() {
+        List<UserInfo> meitrexStudentInfoList;
+
+        List<UnfinishedGradingEntity> unfinishedGradingEntityList = unfinishedGradingRepository.findAll();
+
+        for (final UnfinishedGradingEntity unfinishedGradingEntity : unfinishedGradingEntityList) {
+            JSONObject jsonObject = new JSONObject(unfinishedGradingEntity.getGradingJson());
+            AssignmentEntity assignmentEntity = assignmentService.requireAssignmentExists(unfinishedGradingEntity.getId().getAssignmentId());
+
             try {
+                // throws first two exceptions
+                meitrexStudentInfoList = getMeitrexStudentInfoList(assignmentEntity.getCourseId());
+                // throws second two exceptions
                 GradingEntity gradingEntity = parseIntoGradingEntity(jsonObject, assignmentEntity, meitrexStudentInfoList);
+                // should not throw anything
                 gradingRepository.save(gradingEntity);
                 logGradingImported(gradingEntity);
                 unfinishedGradingRepository.deleteById(unfinishedGradingEntity.getId());
-            } catch (ManualMappingRequiredException | ExternalPlatformConnectionException e) {
+            } catch (UserServiceConnectionException | CourseServiceConnectionException |
+                     ManualMappingRequiredException | ExternalPlatformConnectionException e){
                 // if something goes wrong, unfinished gradings will be added to repo again
                 unfinishedGradingEntity.incrementNumberOfTries();
                 unfinishedGradingRepository.save(unfinishedGradingEntity);
             }
-
         }
-
-        // returns all the newly mapped external student ids
-        return externalStudentIdList;
     }
 
+    /**
+     * Returns all instances, where an admin needs to manually map a meitrex user to an external student.
+     *
+     * @param courseId the current course
+     * @param currentUser the currently logged-in user
+     * @return list of all manual mapping instances
+     */
     public List<ManualMappingInstance> getManualMappingInstances(final UUID courseId, final LoggedInUser currentUser) {
         try {
             validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
