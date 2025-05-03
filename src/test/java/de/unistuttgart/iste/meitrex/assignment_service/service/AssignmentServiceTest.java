@@ -1,13 +1,18 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.meitrex.common.event.ContentChangeEvent;
 import de.unistuttgart.iste.meitrex.common.event.CrudOperation;
 import de.unistuttgart.iste.meitrex.common.exception.IncompleteEventMessageException;
+import de.unistuttgart.iste.meitrex.content_service.client.ContentServiceClient;
+import de.unistuttgart.iste.meitrex.course_service.client.CourseServiceClient;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.modelmapper.ModelMapper;
@@ -27,8 +32,12 @@ public class AssignmentServiceTest {
     private final AssignmentMapper assignmentMapper = new AssignmentMapper(new ModelMapper());
     private final AssignmentValidator assignmentValidator = new AssignmentValidator();
     private final TopicPublisher topicPublisher = Mockito.mock(TopicPublisher.class);
+    private final CourseServiceClient courseServiceClient = Mockito.mock(CourseServiceClient.class);
+    private final ContentServiceClient contentServiceClient = Mockito.mock(ContentServiceClient.class);
+    private final CodeAssessmentProvider codeAssessmentProvider = Mockito.mock(CodeAssessmentProvider.class);
+    private final ExternalCodeAssignmentRepository externalCodeAssignmentRepository = Mockito.mock(ExternalCodeAssignmentRepository.class);
 
-    private final AssignmentService assignmentService = new AssignmentService(assignmentRepository, assignmentMapper, assignmentValidator, topicPublisher);
+    private final AssignmentService assignmentService = new AssignmentService(assignmentRepository, assignmentMapper, assignmentValidator, topicPublisher, courseServiceClient, contentServiceClient, codeAssessmentProvider, externalCodeAssignmentRepository);
 
     @Test
     void deleteAssignmentIfContentIsDeletedValidTest() {
