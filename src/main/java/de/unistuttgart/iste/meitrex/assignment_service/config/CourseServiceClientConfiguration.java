@@ -1,6 +1,6 @@
 package de.unistuttgart.iste.meitrex.assignment_service.config;
 
-
+import de.unistuttgart.iste.meitrex.course_service.client.CourseServiceClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
