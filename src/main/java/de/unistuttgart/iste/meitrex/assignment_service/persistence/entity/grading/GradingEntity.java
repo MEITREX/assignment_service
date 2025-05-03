@@ -1,11 +1,13 @@
-package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity;
+package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading;
 
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.CodeAssignmentMetadataEntity;
 import de.unistuttgart.iste.meitrex.common.persistence.IWithId;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.tomcat.util.codec.binary.StringUtils;
 
 import java.io.Serializable;
 import java.time.OffsetDateTime;
@@ -20,17 +22,26 @@ import java.util.UUID;
 public class GradingEntity implements IWithId<GradingEntity.PrimaryKey> {
 
     @EmbeddedId
+    @AttributeOverrides({
+            @AttributeOverride(name = "assessmentId", column = @Column(name = "assessment_id")),
+            @AttributeOverride(name = "studentId", column = @Column(name = "student_id"))
+    })
     private PrimaryKey primaryKey;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private OffsetDateTime date;
 
     @Column(nullable = false)
     private double achievedCredits;
 
-    @Column(nullable = false)
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "parentGrading")
     private List<ExerciseGradingEntity> exerciseGradings;
+
+    /**
+     * Stores additional metadata for code-based assignments gradings.
+     */
+    @OneToOne(mappedBy = "grading", cascade = CascadeType.ALL, orphanRemoval = true)
+    private CodeAssignmentGradingMetadataEntity codeAssignmentGradingMetadata;
 
     @Data
     @Embeddable
