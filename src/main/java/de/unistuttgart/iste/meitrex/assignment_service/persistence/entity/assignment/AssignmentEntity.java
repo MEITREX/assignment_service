@@ -1,5 +1,6 @@
-package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity;
+package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment;
 
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
 import de.unistuttgart.iste.meitrex.common.persistence.IWithId;
 import de.unistuttgart.iste.meitrex.generated.dto.AssignmentType;
 import jakarta.persistence.*;
@@ -33,6 +34,16 @@ public class AssignmentEntity implements IWithId<UUID> {
 
     @Column(nullable = false)
     private AssignmentType assignmentType;
+
+    /**
+     * Stores additional metadata for code-based assignments.
+     * <p>
+     * This is modeled as a separate entity (instead of an embeddable) because
+     * it avoids polluting the main table with nullable fields not used by most rows
+     * <p>
+     */
+    @OneToOne(mappedBy = "assignment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private CodeAssignmentMetadataEntity codeAssignmentMetadata;
 
     @Column(nullable = true)
     private String description;

@@ -1,9 +1,9 @@
 package de.unistuttgart.iste.meitrex.assignment_service.validation;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseGradingEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.GradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.ExerciseGradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Component;
@@ -15,6 +15,10 @@ public class AssignmentValidator {
     private static final double EPSILON = 0.01;
 
     public void validateCreateAssignmentInput(final CreateAssignmentInput createAssignmentInput) {
+        if (!hasExercises(createAssignmentInput.getAssignmentType())) {
+            return;
+        }
+
         final List<CreateExerciseInput> exercises = createAssignmentInput.getExercises();
 
         // checks if all exercise credits sum up to assignment credits
@@ -99,6 +103,13 @@ public class AssignmentValidator {
                 throw new ValidationException("Not the same amount of subexercises in grading and assignment for exercise %d!".formatted(i));
             }
         }
+    }
 
+    // Since GitHub's API does not provide information about what should be done in the code assignment except for a Readme
+    private boolean hasExercises(AssignmentType type) {
+        return switch (type) {
+            case EXERCISE_SHEET, PHYSICAL_TEST -> true;
+            case CODE_ASSIGNMENT -> false;
+        };
     }
 }
