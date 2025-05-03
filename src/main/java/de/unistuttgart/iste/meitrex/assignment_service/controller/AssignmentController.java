@@ -5,6 +5,7 @@ import de.unistuttgart.iste.meitrex.common.exception.NoAccessToCourseException;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import de.unistuttgart.iste.meitrex.assignment_service.service.AssignmentService;
+import jdk.jfr.ContentType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.*;
@@ -43,10 +44,19 @@ public class AssignmentController {
     }
 
     @QueryMapping
+    public List<String> getExternalCodeAssignments(@Argument final UUID courseId, @ContextValue final LoggedInUser currentUser) {
+        return assignmentService.getExternalCodeAssignments(courseId, currentUser);
+    }
+
+    @QueryMapping
     public Grading getGradingForAssignmentForStudent(@Argument final UUID assessmentId, @Argument final UUID studentId, @ContextValue final LoggedInUser currentUser) {
         return gradingService.getGradingForAssignmentForStudent(assessmentId, studentId, currentUser);
     }
 
+    @QueryMapping
+    public List<Grading> getGradingsForAssignment(@Argument final UUID assessmentId, @ContextValue final LoggedInUser currentUser) {
+        return gradingService.getGradingsForAssignment(assessmentId,  currentUser);
+    }
 
     @QueryMapping
     public List<ExternalAssignment> getExternalAssignments(@Argument final UUID courseId, @ContextValue final LoggedInUser currentUser) {
@@ -63,8 +73,8 @@ public class AssignmentController {
     @MutationMapping(name = "_internal_noauth_createAssignment")
     public Assignment createAssignment(@Argument final UUID courseId,
                                        @Argument final UUID assessmentId,
-                                       @Argument final CreateAssignmentInput input) {
-        return assignmentService.createAssignment(courseId, assessmentId, input);
+                                       @Argument final CreateAssignmentInput input,  @ContextValue final LoggedInUser currentUser) {
+        return assignmentService.createAssignment(courseId, assessmentId, input, currentUser);
     }
 
     @MutationMapping
@@ -82,6 +92,11 @@ public class AssignmentController {
                                           @Argument final List<StudentMappingInput> studentMappingInputs,
                                           @ContextValue final LoggedInUser currentUser) {
         return gradingService.saveStudentMappings(courseId, studentMappingInputs, currentUser);
+    }
+
+    @MutationMapping
+    public boolean syncAssignmentsForCourse(@Argument final String courseTitle, @ContextValue final LoggedInUser currentUser) {
+        return assignmentService.syncAssignmentsForCourse(courseTitle, currentUser);
     }
 
     /* Schema Mappings */

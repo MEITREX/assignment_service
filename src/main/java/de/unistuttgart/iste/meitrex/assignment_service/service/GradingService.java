@@ -4,14 +4,22 @@ package de.unistuttgart.iste.meitrex.assignment_service.service;
 import de.unistuttgart.iste.meitrex.assignment_service.config.ExternalSystemConfiguration;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ManualMappingRequiredException;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.CodeAssignmentMetadataEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.SubexerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.*;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.*;
+import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
+import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.ExternalGrading;
+import de.unistuttgart.iste.meitrex.content_service.client.ContentServiceClient;
+import de.unistuttgart.iste.meitrex.content_service.exception.ContentServiceConnectionException;
+import de.unistuttgart.iste.meitrex.course_service.client.CourseServiceClient;
+import de.unistuttgart.iste.meitrex.user_service.client.UserServiceClient;
 import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
 import de.unistuttgart.iste.meitrex.course_service.exception.CourseServiceConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.*;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ManualMappingInstanceRepository;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.StudentMappingRepository;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.UnfinishedGradingRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.meitrex.common.event.ContentProgressedEvent;
@@ -22,6 +30,7 @@ import de.unistuttgart.iste.meitrex.generated.dto.*;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.json.*;
 
@@ -32,9 +41,11 @@ import java.net.http.HttpResponse;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static de.unistuttgart.iste.meitrex.common.user_handling.UserCourseAccessValidator.validateUserHasAccessToCourse;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GradingService {
@@ -50,8 +61,11 @@ public class GradingService {
 
     private final UserServiceClient userServiceClient;
     private final CourseServiceClient courseServiceClient;
+    private final ContentServiceClient contentServiceClient;
 
     private final ExternalSystemConfiguration externalSystemConfiguration;
+    private final CodeAssessmentProvider codeAssessmentProvider;
+    private final AssignmentRepository assignmentRepository;
 
     /**
      * Returns a grading for the given student on the given assignment.
@@ -74,6 +88,130 @@ public class GradingService {
 
         return assignmentMapper.gradingEntityToDto(gradingEntity);
     }
+
+    private List<Grading> getGradingForStudent(final AssignmentEntity assignment, final LoggedInUser currentUser){
+        final GradingEntity.PrimaryKey pk = new GradingEntity.PrimaryKey(assignment.getId(), currentUser.getId());
+        GradingEntity gradingEntity = gradingRepository.findById(pk).orElse(null);
+
+        if (gradingEntity == null && assignment.getAssignmentType() == AssignmentType.CODE_ASSIGNMENT) {
+            gradingEntity = GradingEntity.builder()
+                    .primaryKey(pk)
+                    .achievedCredits(-1)
+                    .build();
+
+            CodeAssignmentGradingMetadataEntity metadata = CodeAssignmentGradingMetadataEntity.builder()
+                    .grading(gradingEntity)
+                    .repoLink(null)
+                    .status(null)
+                    .feedbackTableHtml(null)
+                    .build();
+
+            gradingEntity.setCodeAssignmentGradingMetadata(metadata);
+        }
+
+        if (gradingEntity != null && gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink() == null && assignment.getAssignmentType() == AssignmentType.CODE_ASSIGNMENT) {
+            try {
+                String assignmentName = contentServiceClient.queryContentsOfCourse(currentUser.getId(), assignment.getCourseId()).stream()
+                        .filter(assignmentDto -> assignmentDto.getId().equals(assignment.getId()))
+                        .findFirst()
+                        .orElseThrow(() -> new EntityNotFoundException("Assignment with externalId %s not found".formatted(assignment.getExternalId())))
+                        .getMetadata().getName();
+
+                String repoLink = codeAssessmentProvider.findRepository(assignmentName, currentUser);
+                gradingEntity.getCodeAssignmentGradingMetadata().setRepoLink(repoLink);
+
+            } catch (ExternalPlatformConnectionException | UserServiceConnectionException | ContentServiceConnectionException e) {
+                throw new RuntimeException(e.toString());
+            }
+        }
+
+        if (gradingEntity != null && gradingEntity.getCodeAssignmentGradingMetadata() != null &&
+                gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink() != null) {
+            try {
+                ExternalGrading externalGrading = codeAssessmentProvider.syncGradeForStudent(gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink(), currentUser);
+                gradingEntity.setAchievedCredits(externalGrading.achievedPoints());
+                CodeAssignmentGradingMetadataEntity metadata = gradingEntity.getCodeAssignmentGradingMetadata();
+                metadata.setStatus(externalGrading.status());
+                metadata.setFeedbackTableHtml(externalGrading.tableHtml());
+                gradingEntity.setDate(OffsetDateTime.parse(externalGrading.date()));
+            } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
+                log.error("Failed to sync student grade for assignment {} and student {}: {}", assignment.getId(), currentUser.getId(), e.toString());
+            }
+        }
+
+        gradingEntity = gradingRepository.save(gradingEntity);
+        return List.of(assignmentMapper.gradingEntityToDto(gradingEntity));
+    }
+
+    public List<Grading> getGradingsForAssignment(final UUID assignmentId, final LoggedInUser currentUser) {
+        final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId);
+
+        LoggedInUser.CourseMembership courseMembership = (LoggedInUser.CourseMembership) currentUser.getCourseMemberships().stream().filter((membership) -> membership.getCourseId().equals(assignment.getCourseId())).findFirst().orElseThrow(() -> new NoAccessToCourseException(assignment.getCourseId(), "User is not a member of the course."));
+
+        if (courseMembership.getRole() == LoggedInUser.UserRoleInCourse.STUDENT) {
+           return getGradingForStudent(assignment, currentUser);
+        }
+
+        return Collections.emptyList();
+//
+//        List<ExternalGrading> externalGrades;
+//        try {
+//            externalGrades = codeAssessmentProvider.syncGrades(assignment.getExternalId(), currentUser);
+//        } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
+//            throw new RuntimeException("Failed to sync grades from GitHub Classroom" + e);
+//        }
+//
+//        if (assignment.getTotalCredits() == -1 && !externalGrades.isEmpty()) {
+//            assignment.setTotalCredits(externalGrades.get(0).totalPoints());
+//            assignmentRepository.save(assignment);
+//        }
+//
+//        final List<UUID> studentIds;
+//        try {
+//            studentIds = getMeitrexStudentInfoList(assignment.getCourseId()).stream()
+//                    .map(UserInfo::getId)
+//                    .collect(Collectors.toList());
+//        } catch (UserServiceConnectionException | CourseServiceConnectionException e) {
+//            throw new RuntimeException("Failed to retrieve student info for course.", e);
+//        }
+//
+//        List<ExternalUserIdWithUser> externalIds;
+//        try {
+//            externalIds = userServiceClient.queryExternalUserIds(ExternalServiceProviderDto.GITHUB, studentIds);
+//        } catch (UserServiceConnectionException e) {
+//            throw new RuntimeException("Failed to retrieve external user IDs from UserService.", e);
+//        }
+//
+//        Map<String, UUID> githubToStudentId = externalIds.stream()
+//                .collect(Collectors.toMap(ExternalUserIdWithUser::getExternalUserId, ExternalUserIdWithUser::getUserId));
+//
+//        Map<UUID, GradingEntity> existing = gradingRepository.findAllByPrimaryKey_AssessmentId(assignmentId).stream()
+//                .collect(Collectors.toMap(
+//                        grading -> grading.getPrimaryKey().getStudentId(),
+//                        grading -> grading
+//                ));
+//
+//        List<GradingEntity> updatedGradings = new ArrayList<>();
+//        for (ExternalGrading external : externalGrades) {
+//            UUID studentId = githubToStudentId.get(external.externalUsername());
+//            if (studentId != null) {
+//                GradingEntity grading = existing.get(studentId);
+//
+//                //grading not null since if an external grade is found, then a student accepted the assignment and created a grading with -1 points
+//                grading.setAchievedCredits(external.achievedPoints());
+//
+//                updatedGradings.add(grading);
+//            }
+//        }
+//
+//
+//        gradingRepository.saveAll(updatedGradings);
+//        return gradingRepository.findAllByPrimaryKey_AssessmentId(assignmentId).stream()
+//                .map(assignmentMapper::gradingEntityToDto)
+//                .collect(Collectors.toList());
+    }
+
+
 
     /**
      * Handles importing all gradings for one assignment from the external system (TMS).

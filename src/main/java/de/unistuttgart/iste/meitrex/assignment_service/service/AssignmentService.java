@@ -1,7 +1,11 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.SubexerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.SubexerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.meitrex.common.event.ContentChangeEvent;
@@ -10,10 +14,13 @@ import de.unistuttgart.iste.meitrex.common.event.CrudOperation;
 import de.unistuttgart.iste.meitrex.common.event.Response;
 import de.unistuttgart.iste.meitrex.common.exception.IncompleteEventMessageException;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
+import de.unistuttgart.iste.meitrex.content_service.client.ContentServiceClient;
+import de.unistuttgart.iste.meitrex.course_service.client.CourseServiceClient;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.CodeAssignmentMetadataEntity;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +42,10 @@ public class AssignmentService {
     private final AssignmentMapper assignmentMapper;
     private final AssignmentValidator assignmentValidator;
     private final TopicPublisher topicPublisher;
+    private final CourseServiceClient courseServiceClient;
+    private final ContentServiceClient contentServiceClient;
+    private final CodeAssessmentProvider codeAssessmentProvider;
+    private final ExternalCodeAssignmentRepository externalCodeAssignmentRepository;
 
     /**
      * Returns all assignments that are linked to the given assessment ids
@@ -48,6 +59,17 @@ public class AssignmentService {
                 .toList();
     }
 
+    public List<String> getExternalCodeAssignments(final UUID courseId, final LoggedInUser currentUser) {
+        try {
+            validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
+            String courseTitle = courseServiceClient.queryCourseById(courseId).getTitle();
+            return externalCodeAssignmentRepository.findAssignmentNamesByCourseTitle(courseTitle);
+        } catch (Exception e) {
+            log.error("Failed to get external code assignments for course {}: {}", courseId, e.getMessage());
+            return List.of();
+        }
+    }
+
     /**
      * Creates a new assignment
      *
@@ -59,15 +81,61 @@ public class AssignmentService {
      * @throws ValidationException if the assignment input is invalid according
      *                              to {@link AssignmentValidator#validateCreateAssignmentInput(CreateAssignmentInput)}
      */
-    public Assignment createAssignment(final UUID courseId, final UUID assessmentId, final CreateAssignmentInput createAssignmentInput) {
+    public Assignment createAssignment(final UUID courseId, final UUID assessmentId, final CreateAssignmentInput createAssignmentInput, final LoggedInUser currentUser) {
         assignmentValidator.validateCreateAssignmentInput(createAssignmentInput);
 
         final AssignmentEntity mappedAssignmentEntity = assignmentMapper.createAssignmentInputToEntity(createAssignmentInput);
         mappedAssignmentEntity.setAssessmentId(assessmentId);
         mappedAssignmentEntity.setCourseId(courseId);
 
+        if (createAssignmentInput.getAssignmentType() == AssignmentType.CODE_ASSIGNMENT) {
+            //GitHub Classroom cool design allows to query the credits only when there is a grading, i.e. a student pushed code
+            mappedAssignmentEntity.setTotalCredits(-1);
+            this.createCodeAssignment(courseId, assessmentId, mappedAssignmentEntity, currentUser);
+        }
+
         final AssignmentEntity savedAssignmentEntity = assignmentRepository.save(mappedAssignmentEntity);
         return assignmentMapper.assignmentEntityToDto(savedAssignmentEntity);
+    }
+
+    private void createCodeAssignment (final UUID courseId, final UUID assessmentId, final AssignmentEntity assignmentEntity, final LoggedInUser currentUser){
+        try {
+            String courseTitle = courseServiceClient.queryCourseById(courseId).getTitle();
+
+            String assignmentName = contentServiceClient.queryContentsOfCourse(currentUser.getId(), courseId).stream()
+                    .filter(content -> content.getId().equals(assessmentId))
+                    .map(content -> content.getMetadata().getName())
+                    .findFirst().orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
+
+            ExternalCodeAssignmentEntity externalAssignment = externalCodeAssignmentRepository.findById(new ExternalCodeAssignmentEntity.PrimaryKey(courseTitle, assignmentName))
+                    .orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
+
+            assignmentEntity.setDate(externalAssignment.getDueDate());
+
+            CodeAssignmentMetadataEntity metadata = CodeAssignmentMetadataEntity.builder()
+                    .assignment(assignmentEntity)
+                    .assignmentLink(externalAssignment.getAssignmentLink())
+                    .invitationLink(externalAssignment.getInvitationLink())
+                    .readmeHtml(externalAssignment.getReadmeHtml())
+                    .build();
+
+            //External Id used to fetch assignment grades
+            assignmentEntity.setExternalId(externalAssignment.getExternalId());
+            assignmentEntity.setCodeAssignmentMetadata(metadata);
+            externalCodeAssignmentRepository.delete(externalAssignment);
+        } catch (Exception e) {
+            throw new ValidationException("Failed to enrich code assignment from GitHub Classroom", e);
+        }
+    }
+
+    public boolean syncAssignmentsForCourse(final String courseTitle, final LoggedInUser currentUser) {
+        try {
+            codeAssessmentProvider.syncAssignmentsForCourse(courseTitle, currentUser);
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to sync assignments for course {}: {}", courseTitle, e.getMessage());
+            return false;
+        }
     }
 
 
