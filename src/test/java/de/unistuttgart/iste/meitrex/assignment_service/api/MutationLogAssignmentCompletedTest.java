@@ -1,8 +1,8 @@
 package de.unistuttgart.iste.meitrex.assignment_service.api;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.SubexerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.SubexerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.test_utils.TestUtils;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;

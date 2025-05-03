@@ -1,6 +1,6 @@
 package de.unistuttgart.iste.meitrex.assignment_service.persistence.repository;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.UnfinishedGradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.UnfinishedGradingEntity;
 import de.unistuttgart.iste.meitrex.common.persistence.MeitrexRepository;
 import org.springframework.stereotype.Repository;
 

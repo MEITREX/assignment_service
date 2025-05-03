@@ -1,8 +1,8 @@
 package de.unistuttgart.iste.meitrex.assignment_service.api;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExerciseGradingEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.GradingEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.SubexerciseGradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.ExerciseGradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.SubexerciseGradingEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.service.AssignmentService;
 import de.unistuttgart.iste.meitrex.assignment_service.service.GradingService;
@@ -115,7 +115,7 @@ public class ImportGradingsForAssignmentTest {
                 .setExercises(createExerciseInputList)
                 .build();
 
-        Assignment assignment = assignmentService.createAssignment(courseId, assessmentId, createAssignmentInput);
+        Assignment assignment = assignmentService.createAssignment(courseId, assessmentId, createAssignmentInput, loggedInUser);
 
         // import gradings from TMS (the important part)
 

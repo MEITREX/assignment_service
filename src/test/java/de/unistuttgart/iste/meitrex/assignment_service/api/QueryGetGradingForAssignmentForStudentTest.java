@@ -1,8 +1,8 @@
 package de.unistuttgart.iste.meitrex.assignment_service.api;
 
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.AssignmentEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.GradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
