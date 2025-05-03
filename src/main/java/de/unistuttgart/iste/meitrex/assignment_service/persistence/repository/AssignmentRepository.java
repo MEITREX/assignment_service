@@ -13,4 +13,6 @@ import java.util.UUID;
 public interface AssignmentRepository extends MeitrexRepository<AssignmentEntity, UUID> {
     @Query("SELECT a FROM Assignment a LEFT JOIN FETCH a.codeAssignmentMetadata WHERE a.assessmentId = :id")
     Optional<AssignmentEntity> findByIdWithCodeMetadata(@Param("id") UUID id);
+
+    boolean existsByExternalId(String externalId);
 }

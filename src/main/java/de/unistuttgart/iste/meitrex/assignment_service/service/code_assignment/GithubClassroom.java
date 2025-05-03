@@ -4,8 +4,10 @@ import com.google.gson.*;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
+import de.unistuttgart.iste.meitrex.generated.dto.AssignmentType;
 import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
 import de.unistuttgart.iste.meitrex.generated.dto.ExternalServiceProviderDto;
 import de.unistuttgart.iste.meitrex.user_service.client.UserServiceClient;
@@ -49,13 +51,15 @@ public class GithubClassroom implements CodeAssessmentProvider {
             .followRedirects(HttpClient.Redirect.ALWAYS)
             .build();
     private final UserServiceClient userServiceClient;
+    private final AssignmentRepository assignmentRepository;
     private final ExternalCodeAssignmentRepository externalCodeAssignmentRepository;
-    private String organizationName;
+    private final String organizationName;
 
-    public GithubClassroom(UserServiceClient userServiceClient,
+    public GithubClassroom(UserServiceClient userServiceClient, AssignmentRepository assignmentRepository,
                            ExternalCodeAssignmentRepository externalCodeAssignmentRepository,
                            @Value("${github.organization_name}") String organizationName) {
         this.userServiceClient = userServiceClient;
+        this.assignmentRepository = assignmentRepository;
         this.externalCodeAssignmentRepository = externalCodeAssignmentRepository;
         this.organizationName = organizationName;
     }
@@ -115,7 +119,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
                 }
 
                 // Fetch README
-                String fullName;
+                String readmeHtml = "";
                 try {
                     HttpRequest assignmentDetailsRequest = HttpRequest.newBuilder()
                             .uri(URI.create(BASE_PATH + "/assignments/" + assignmentId))
@@ -131,13 +135,13 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     }
 
                     JsonObject detailedAssignment = JsonParser.parseString(assignmentDetailsResponse.body()).getAsJsonObject();
-                    fullName = detailedAssignment.getAsJsonObject("starter_code_repository").get("full_name").getAsString();
-                } catch (IOException | InterruptedException e) {
-                    throw new ExternalPlatformConnectionException("Failed to fetch assignment details: " + e.getMessage());
-                }
+                    String fullName = null;
+                    JsonElement repoElement = detailedAssignment.get("starter_code_repository");
 
-                String readmeHtml = "";
-                try {
+                    if (repoElement != null && !repoElement.isJsonNull()) {
+                        fullName = repoElement.getAsJsonObject().get("full_name").getAsString();
+                    }
+
                     HttpRequest readmeRequest = HttpRequest.newBuilder()
                             .uri(URI.create(BASE_PATH + "/repos/" + fullName + "/readme"))
                             .header("Accept", "application/vnd.github.html+json")
@@ -158,6 +162,13 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     }
                 } catch (IOException | InterruptedException e) {
                     // Ignore README failures
+                }
+
+                boolean codeAssignmentAlreadyExists = assignmentRepository.existsByExternalId(assignmentId);
+
+                if (codeAssignmentAlreadyExists) {
+                    log.info("Assignment '{}' already exists. Skipping sync.", assignmentName);
+                    continue;
                 }
 
                 externalCodeAssignmentRepository.save(ExternalCodeAssignmentEntity.builder()
