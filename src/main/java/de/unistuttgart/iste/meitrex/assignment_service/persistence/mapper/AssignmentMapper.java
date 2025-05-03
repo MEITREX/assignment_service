@@ -1,10 +1,21 @@
 package de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper;
 
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.*;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.CodeAssignmentMetadataEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.SubexerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.ExerciseGradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.SubexerciseGradingEntity;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.modelmapper.convention.MatchingStrategies;
+import org.modelmapper.spi.MatchingStrategy;
 import org.springframework.stereotype.Component;
+
+import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor
@@ -17,20 +28,32 @@ public class AssignmentMapper {
             return null;
         }
 
+        MatchingStrategy originalStrategy = modelMapper.getConfiguration().getMatchingStrategy();
+        modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
         Assignment mappedAssignment = modelMapper.map(assignmentEntity, Assignment.class);
 
-        mappedAssignment.setExercises(assignmentEntity.getExercises().stream().map(this::exerciseEntityToDto).toList());
+        if (assignmentEntity.getAssignmentType() != AssignmentType.CODE_ASSIGNMENT) {
+            mappedAssignment.setExercises(assignmentEntity.getExercises().stream().map(this::exerciseEntityToDto).toList());
+        } else {
+            CodeAssignmentMetadataEntity meta = assignmentEntity.getCodeAssignmentMetadata();
+            mappedAssignment.setAssignmentLink(meta.getAssignmentLink());
+            mappedAssignment.setInvitationLink(meta.getInvitationLink());
+            mappedAssignment.setReadmeHtml(meta.getReadmeHtml());
+        }
 
+        modelMapper.getConfiguration().setMatchingStrategy(originalStrategy);
         return mappedAssignment;
     }
 
     public AssignmentEntity assignmentDtoToEntity(Assignment assignment) {
         AssignmentEntity mappedAssignment = modelMapper.map(assignment, AssignmentEntity.class);
 
-        for (final ExerciseEntity exerciseEntity : mappedAssignment.getExercises()) {
-            exerciseEntity.setParentAssignment(mappedAssignment);
-            for (final SubexerciseEntity subexerciseEntity : exerciseEntity.getSubexercises()) {
-                subexerciseEntity.setParentExercise(exerciseEntity);
+        if (mappedAssignment.getAssignmentType() != AssignmentType.CODE_ASSIGNMENT) {
+            for (final ExerciseEntity exerciseEntity : mappedAssignment.getExercises()) {
+                exerciseEntity.setParentAssignment(mappedAssignment);
+                for (final SubexerciseEntity subexerciseEntity : exerciseEntity.getSubexercises()) {
+                    subexerciseEntity.setParentExercise(exerciseEntity);
+                }
             }
         }
 
@@ -40,10 +63,12 @@ public class AssignmentMapper {
     public AssignmentEntity createAssignmentInputToEntity(final CreateAssignmentInput createAssignmentInput) {
         AssignmentEntity mappedAssignmentEntity = modelMapper.map(createAssignmentInput, AssignmentEntity.class);
 
-        for (final ExerciseEntity exerciseEntity : mappedAssignmentEntity.getExercises()) {
-            exerciseEntity.setParentAssignment(mappedAssignmentEntity);
-            for (final SubexerciseEntity subexerciseEntity : exerciseEntity.getSubexercises()) {
-                subexerciseEntity.setParentExercise(exerciseEntity);
+        if (mappedAssignmentEntity.getAssignmentType() != AssignmentType.CODE_ASSIGNMENT) {
+            for (final ExerciseEntity exerciseEntity : mappedAssignmentEntity.getExercises()) {
+                exerciseEntity.setParentAssignment(mappedAssignmentEntity);
+                for (final SubexerciseEntity subexerciseEntity : exerciseEntity.getSubexercises()) {
+                    subexerciseEntity.setParentExercise(exerciseEntity);
+                }
             }
         }
 
@@ -96,10 +121,19 @@ public class AssignmentMapper {
         mappedGrading.setAssessmentId(gradingEntity.getPrimaryKey().getAssessmentId());
         mappedGrading.setStudentId(gradingEntity.getPrimaryKey().getStudentId());
 
-        mappedGrading.setExerciseGradings(gradingEntity.getExerciseGradings().stream().map(this::exerciseGradingEntityToDto).toList());
+        if (gradingEntity.getExerciseGradings() != null) {
+            mappedGrading.setExerciseGradings(
+                    gradingEntity.getExerciseGradings().stream()
+                            .map(this::exerciseGradingEntityToDto)
+                            .toList()
+            );
+        } else {
+            mappedGrading.setExerciseGradings(Collections.emptyList());
+        }
 
         return mappedGrading;
     }
+
 
     public ExerciseGrading exerciseGradingEntityToDto(final ExerciseGradingEntity exerciseGradingEntity) {
         ExerciseGrading mappedExerciseGrading = modelMapper.map(exerciseGradingEntity, ExerciseGrading.class);
