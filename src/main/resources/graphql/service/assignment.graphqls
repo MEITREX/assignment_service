@@ -14,8 +14,9 @@ type Assignment {
 
     """
     List of exercises making up the assignment.
+    Optional for CODE_ASSIGNMENT since GH Classroom does not provide exercises.
     """
-    exercises: [Exercise!]!
+    exercises: [Exercise!]
 
     """
     The date at which the assignment had to be handed in (optional).
@@ -47,6 +48,21 @@ type Assignment {
     This is needed for mapping grading data to assignments.
     """
     externalId: String
+
+    """
+    Link to the GitHub Classroom or equivalent (optional, CODE_ASSIGNMENT only).
+    """
+    assignmentLink: String
+
+    """
+    Invitation link for students to join the assignment (optional, CODE_ASSIGNMENT only).
+    """
+    invitationLink: String
+
+    """
+    README content in HTML format for the assignment (optional, CODE_ASSIGNMENT only).
+    """
+    readmeHtml: String
 }
 
 
@@ -115,5 +131,6 @@ The type of assignment.
 enum AssignmentType {
     EXERCISE_SHEET
     PHYSICAL_TEST
+    CODE_ASSIGNMENT
     # add more types here
 }

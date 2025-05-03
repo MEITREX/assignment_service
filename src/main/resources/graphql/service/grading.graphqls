@@ -15,7 +15,7 @@ type Grading {
     """
     The date and time of when the tutor corrected the assignment.
     """
-    date: DateTime!
+    date: DateTime
 
     """
     The absolute number of achieved credits on the assignment.
@@ -23,9 +23,31 @@ type Grading {
     achievedCredits: Float!
 
     """
+    CodeAssignmentGradingMetadata contains metadata for the external code assignment grading.
+    """
+    codeAssignmentGradingMetadata: CodeAssignmentGradingMetadata
+
+    """
     List of exercise-gradings for each exercise in the assignment. Can be empty, if there are no exercises within the assignment.
     """
-    exerciseGradings: [ExerciseGrading]!
+    exerciseGradings: [ExerciseGrading!]
+}
+
+type CodeAssignmentGradingMetadata {
+    """
+    The repository link of for the external code assignment.
+    """
+    repoLink: String
+
+    """
+    The pipeline status of the corresponding repository.
+    """
+    status: String
+
+    """
+    The Github worfklow run log table HTML of the corresponding repository.
+    """
+    feedbackTableHtml: String
 }
 
 type ExerciseGrading {

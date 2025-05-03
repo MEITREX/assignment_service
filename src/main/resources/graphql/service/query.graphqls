@@ -7,13 +7,19 @@ type Query {
     """
     findAssignmentsByAssessmentIds(assessmentIds: [UUID!]!): [Assignment]!
 
-
     """
     Get a grading for one assignment for one student
     🔒 The user must be enrolled in the course the assignment belong to to access them. Otherwise null is returned for
     an assignment if the user has no access to it.
     """
     getGradingForAssignmentForStudent(assessmentId: UUID!, studentId: UUID!): Grading!
+
+    """
+    Get all gradings for one assignment
+    🔒 The user must be an admin in the course the assignment belongs to to access them. Otherwise null is returned for
+    an assignment if the user has no access to it.
+    """
+    getGradingsForAssignment(assessmentId: UUID!): [Grading!]!
 
 
     """
@@ -22,6 +28,13 @@ type Query {
     🔒 The user must be an admin in the course. Otherwise null is returned.
     """
     getExternalAssignments(courseId: UUID!): [ExternalAssignment!]!
+
+    """
+    Gets all the available external code exercises.
+    CourseId is the id of the course the user is currently working is.
+    🔒 The user must be an admin in the course. Otherwise null is returned.
+    """
+    getExternalCodeAssignments(courseId: UUID!): [String!]!
 
 
     """

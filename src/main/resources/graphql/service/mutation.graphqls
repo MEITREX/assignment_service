@@ -30,6 +30,11 @@ type Mutation {
     🔒 The user must be an admin in the course to perform this action.
     """
     saveStudentMappings(courseId: UUID!, studentMappingInputs: [StudentMappingInput!]!): [String]!
+
+    """
+    Fetches assignment info from external code assessment provider for the given course
+    """
+    syncAssignmentsForCourse(courseTitle: String!): Boolean!
 }
 
 type AssignmentMutation {
@@ -71,14 +76,16 @@ type AssignmentMutation {
 
 input CreateAssignmentInput {
     """
-    Number of total credits in the assignment. (Positive or zero)
+    Number of total credits in the assignment. Optional for CODE_ASSIGNMENT.
+    Can be set later when grades are available.
     """
-    totalCredits: Float! @PositiveOrZero
+    totalCredits: Float @PositiveOrZero
 
     """
     List of exercises in this Assignment
+    Optional for CODE_ASSIGNMENT since GH Classroom does not provide exercises.
     """
-    exercises: [CreateExerciseInput!]!
+    exercises: [CreateExerciseInput!]
 
     """
     Type of the assignment, e.g. exercise sheet or physical test.
