@@ -1,5 +1,6 @@
-package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity;
+package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise;
 
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
 import de.unistuttgart.iste.meitrex.common.persistence.IWithId;
 import jakarta.persistence.*;
 import lombok.*;

@@ -1,4 +1,4 @@
-package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity;
+package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading;
 
 import jakarta.persistence.*;
 import lombok.*;
