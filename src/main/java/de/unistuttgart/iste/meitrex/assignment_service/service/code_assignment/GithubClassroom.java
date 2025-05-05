@@ -2,24 +2,19 @@ package de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment;
 
 import com.google.gson.*;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
-import de.unistuttgart.iste.meitrex.generated.dto.AssignmentType;
 import de.unistuttgart.iste.meitrex.generated.dto.ExternalCourse;
 import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
 import de.unistuttgart.iste.meitrex.generated.dto.ExternalServiceProviderDto;
 import de.unistuttgart.iste.meitrex.user_service.client.UserServiceClient;
 import de.unistuttgart.iste.meitrex.generated.dto.AccessToken;
 
-import jakarta.persistence.Access;
-import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
-import org.springframework.expression.spel.ast.Assign;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -30,7 +25,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.OffsetDateTime;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -45,7 +41,7 @@ import java.util.Map;
 @Primary
 public class GithubClassroom implements CodeAssessmentProvider {
 
-    private final ExternalServiceProviderDto NAME = ExternalServiceProviderDto.GITHUB;
+    final ExternalServiceProviderDto NAME = ExternalServiceProviderDto.GITHUB;
     private final String BASE_PATH = "https://api.github.com";
     private final String VERSION = "2022-11-28";
     private final HttpClient client = HttpClient.newBuilder()
@@ -196,102 +192,6 @@ public class GithubClassroom implements CodeAssessmentProvider {
         }
     }
 
-//
-//    @Override
-//    public CodeAssignment findAssignment(LoggedInUser currentUser, String courseTitle, String assignmentName) throws ExternalPlatformConnectionException, UserServiceConnectionException {
-//        try {
-//            AccessToken queryTokenResponse = userServiceClient.queryAccessToken(currentUser, NAME);
-//            String token = queryTokenResponse.getAccessToken();
-//
-//            try {
-//                HttpRequest classroomsRequest = HttpRequest.newBuilder()
-//                        .uri(URI.create(BASE_PATH + "/classrooms"))
-//                        .header("Accept", "application/vnd.github+json")
-//                        .header("Authorization", "Bearer " + token)
-//                        .header("X-GitHub-Api-Version", VERSION)
-//                        .GET()
-//                        .build();
-//
-//                HttpResponse<String> classroomsResponse = client.send(classroomsRequest, HttpResponse.BodyHandlers.ofString());
-//                if (classroomsResponse.statusCode() != 200) {
-//                    throw new ExternalPlatformConnectionException("Failed to fetch classrooms: " + classroomsResponse.body());
-//                }
-//
-//                JsonArray classrooms = JsonParser.parseString(classroomsResponse.body()).getAsJsonArray();
-//                JsonObject classroom = findByNameIgnoreCase(classrooms, "name", courseTitle);
-//                int classroomId = classroom.get("id").getAsInt();
-//
-//                HttpRequest assignmentsRequest = HttpRequest.newBuilder()
-//                        .uri(URI.create(BASE_PATH + "/classrooms/" + classroomId + "/assignments"))
-//                        .header("Accept", "application/vnd.github+json")
-//                        .header("Authorization", "Bearer " + token)
-//                        .header("X-GitHub-Api-Version", VERSION)
-//                        .GET()
-//                        .build();
-//
-//                HttpResponse<String> assignmentsResponse = client.send(assignmentsRequest, HttpResponse.BodyHandlers.ofString());
-//                if (assignmentsResponse.statusCode() != 200) {
-//                    throw new ExternalPlatformConnectionException("Failed to fetch assignments: " + assignmentsResponse.body());
-//                }
-//
-//                JsonArray assignments = JsonParser.parseString(assignmentsResponse.body()).getAsJsonArray();
-//                JsonObject assignment = findByNameIgnoreCase(assignments, "title", assignmentName);
-//
-//                String assignmentLink = classroom.get("url").getAsString() + "/assignments/" + assignment.get("slug").getAsString();
-//                String invitationLink = assignment.get("invite_link").getAsString();
-//                JsonElement deadlineElement = assignment.get("deadline");
-//                OffsetDateTime dueDate = null;
-//                if (deadlineElement != null && !deadlineElement.isJsonNull()) {
-//                    dueDate = OffsetDateTime.parse(deadlineElement.getAsString());
-//                }
-//                String assignmentId = assignment.get("id").getAsString();
-//
-//                HttpRequest assignmentDetailsRequest = HttpRequest.newBuilder()
-//                        .uri(URI.create(BASE_PATH + "/assignments/" + assignmentId))
-//                        .header("Accept", "application/vnd.github+json")
-//                        .header("Authorization", "Bearer " + token)
-//                        .header("X-GitHub-Api-Version", VERSION)
-//                        .GET()
-//                        .build();
-//
-//                HttpResponse<String> assignmentDetailsResponse = client.send(assignmentDetailsRequest, HttpResponse.BodyHandlers.ofString());
-//                if (assignmentDetailsResponse.statusCode() != 200) {
-//                    throw new ExternalPlatformConnectionException("Failed to fetch assignment details: " + assignmentDetailsResponse.body());
-//                }
-//
-//                JsonObject detailedAssignment = JsonParser.parseString(assignmentDetailsResponse.body()).getAsJsonObject();
-//                String fullName = detailedAssignment.getAsJsonObject("starter_code_repository").get("full_name").getAsString();
-//
-//                HttpRequest readmeRequest = HttpRequest.newBuilder()
-//                        .uri(URI.create(BASE_PATH + "/repos/" + fullName + "/readme"))
-//                        .header("Accept", "application/vnd.github.html+json")
-//                        .header("Authorization", "Bearer " + token)
-//                        .header("X-GitHub-Api-Version", VERSION)
-//                        .GET()
-//                        .build();
-//
-//                HttpResponse<String> readmeResponse = client.send(readmeRequest, HttpResponse.BodyHandlers.ofString());
-//                String readmeHtml = null;
-//                if (readmeResponse.statusCode() == 200) {
-//                    String rawReadmeHtml = readmeResponse.body();
-//                    // Clean GitHub README HTML by removing visual noise (e.g., anchor icons)
-//                    readmeHtml = rawReadmeHtml
-//                            // Remove full <a class="anchor">...</a> blocks including embedded SVG link icons
-//                            .replaceAll("<a[^>]*class=\"anchor\"[^>]*>\\s*<svg[^>]*>.*?</svg>\\s*</a>", "")
-//                            // Remove empty lines left behind after tag removal
-//                            .replaceAll("(?m)^\\s+$", "");
-//                }
-//
-//                return new CodeAssignment(assignmentId, assignmentLink, invitationLink, dueDate, readmeHtml);
-//            } catch (IOException | InterruptedException | IllegalStateException e) {
-//                throw new ExternalPlatformConnectionException("Failed to fetch data from GitHub Classroom: " + e.getMessage());
-//            }
-//        } catch (UserServiceConnectionException e) {
-//            throw new UserServiceConnectionException(e.getMessage());
-//        }
-//    }
-
-
     private JsonObject findByNameIgnoreCase(JsonArray array, String fieldName, String targetName) {
         for (JsonElement element : array) {
             JsonObject obj = element.getAsJsonObject();
@@ -331,7 +231,17 @@ public class GithubClassroom implements CodeAssessmentProvider {
                 String username = obj.get("github_username").getAsString();
                 double achieved = obj.get("points_awarded").getAsDouble();
                 double total = obj.get("points_available").getAsDouble();
-                gradings.add(new ExternalGrading(username, null, null, null, achieved, total));
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")
+                        .withZone(ZoneId.of("UTC"));
+
+                ZonedDateTime zonedDateTime = ZonedDateTime.parse(
+                        obj.get("submission_timestamp").getAsString(),
+                        formatter
+                );
+
+                OffsetDateTime submissionDate = zonedDateTime.toOffsetDateTime();
+
+                gradings.add(new ExternalGrading(username, null, submissionDate, null, achieved, total));
             }
 
             return gradings;
@@ -374,7 +284,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
             JsonArray runs = JsonParser.parseString(runsResponse.body())
                     .getAsJsonObject().getAsJsonArray("workflow_runs");
-            if (runs.size() == 0) {
+            if (runs.isEmpty()) {
                 throw new ExternalPlatformConnectionException("No completed workflow runs found.");
             }
 
@@ -385,7 +295,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
             String lastlyTested = run.get("updated_at").getAsString();
 
             if (!status.equals("completed")){
-                return new ExternalGrading(null, status, lastlyTested, null, -1, -1);
+                return new ExternalGrading(null, status, OffsetDateTime.parse(lastlyTested), null, -1, -1);
             }
 
             // Download logs
@@ -424,7 +334,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
                             double totalPoints = Double.parseDouble(matcher.group(1));
                             double maxPoints = Double.parseDouble(matcher.group(2));
                             String tableHtml = extractGradingTableAsHtml(logs);
-                            return new ExternalGrading(null, status, lastlyTested, tableHtml, totalPoints, maxPoints);
+                            return new ExternalGrading(null, status, OffsetDateTime.parse(lastlyTested), tableHtml, totalPoints, maxPoints);
                         } else {
                             throw new ExternalPlatformConnectionException("Could not find totalPoints/maxPoints in logs.");
                         }
@@ -436,6 +346,11 @@ public class GithubClassroom implements CodeAssessmentProvider {
         } catch (IOException | InterruptedException e) {
             throw new ExternalPlatformConnectionException("Failed to fetch student grade: " + e.getMessage());
         }
+    }
+
+    @Override
+    public ExternalServiceProviderDto getName() {
+        return NAME;
     }
 
     private String extractGradingTableAsHtml(String logs) {
