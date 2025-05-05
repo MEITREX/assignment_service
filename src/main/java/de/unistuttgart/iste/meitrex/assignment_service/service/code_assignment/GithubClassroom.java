@@ -8,6 +8,7 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.As
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.AssignmentType;
+import de.unistuttgart.iste.meitrex.generated.dto.ExternalCourse;
 import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
 import de.unistuttgart.iste.meitrex.generated.dto.ExternalServiceProviderDto;
 import de.unistuttgart.iste.meitrex.user_service.client.UserServiceClient;
@@ -358,15 +359,15 @@ public class GithubClassroom implements CodeAssessmentProvider {
             String repo = parts[2];
 
             // Get latest completed workflow runs
-            HttpRequest runsRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_PATH + "/repos/" + owner + "/" + repo + "/actions/runs?status=completed"))
+            HttpRequest runRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_PATH + "/repos/" + owner + "/" + repo + "/actions/runs?per_page=1"))
                     .header("Authorization", "Bearer " + token)
                     .header("Accept", "application/vnd.github+json")
                     .header("X-GitHub-Api-Version", VERSION)
                     .GET()
                     .build();
 
-            HttpResponse<String> runsResponse = client.send(runsRequest, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> runsResponse = client.send(runRequest, HttpResponse.BodyHandlers.ofString());
             if (runsResponse.statusCode() != 200) {
                 throw new ExternalPlatformConnectionException("Failed to fetch workflow runs: " + runsResponse.body());
             }
@@ -382,6 +383,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
             String status = run.get("status").getAsString();
             String logsUrl = run.get("logs_url").getAsString();
             String lastlyTested = run.get("updated_at").getAsString();
+
+            if (!status.equals("completed")){
+                return new ExternalGrading(null, status, lastlyTested, null, -1, -1);
+            }
 
             // Download logs
             HttpRequest logRequest = HttpRequest.newBuilder()
@@ -543,6 +548,35 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
         } catch (IOException | InterruptedException e) {
             throw new ExternalPlatformConnectionException("Error fetching student repo link: " + e.getMessage());
+        }
+    }
+
+    public ExternalCourse getExternalCourse(final String courseTitle, final LoggedInUser currentUser)
+            throws ExternalPlatformConnectionException, UserServiceConnectionException {
+        try {
+            AccessToken queryTokenResponse = userServiceClient.queryAccessToken(currentUser, NAME);
+            String token = queryTokenResponse.getAccessToken();
+
+            HttpRequest classroomsRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(BASE_PATH + "/classrooms"))
+                    .header("Accept", "application/vnd.github+json")
+                    .header("Authorization", "Bearer " + token)
+                    .header("X-GitHub-Api-Version", VERSION)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> classroomsResponse = client.send(classroomsRequest, HttpResponse.BodyHandlers.ofString());
+            if (classroomsResponse.statusCode() != 200) {
+                throw new ExternalPlatformConnectionException("Failed to fetch classrooms: " + classroomsResponse.body());
+            }
+
+            JsonArray classrooms = JsonParser.parseString(classroomsResponse.body()).getAsJsonArray();
+            JsonObject classroom = findByNameIgnoreCase(classrooms, "name", courseTitle);
+
+            return new ExternalCourse(classroom.get("id").getAsString(), classroom.get("url").getAsString());
+
+        } catch (IOException | InterruptedException e) {
+            throw new ExternalPlatformConnectionException("Error fetching external course: " + e.getMessage());
         }
     }
 

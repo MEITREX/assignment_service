@@ -1,10 +1,13 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service;
 
+import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExternalCourseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.SubexerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCourseRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
@@ -21,6 +24,7 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assign
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.CodeAssignmentMetadataEntity;
+import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +50,7 @@ public class AssignmentService {
     private final ContentServiceClient contentServiceClient;
     private final CodeAssessmentProvider codeAssessmentProvider;
     private final ExternalCodeAssignmentRepository externalCodeAssignmentRepository;
+    private final ExternalCourseRepository externalCourseRepository;
 
     /**
      * Returns all assignments that are linked to the given assessment ids
@@ -495,4 +500,33 @@ public class AssignmentService {
     private void publishItemChangeEvent(final UUID itemId) {
         topicPublisher.notifyItemChanges(itemId, CrudOperation.DELETE);
     }
+
+    public ExternalCourse getExternalCourse(final UUID courseId, final LoggedInUser currentUser) {
+        try {
+            validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
+
+            String courseTitle = courseServiceClient.queryCourseById(courseId).getTitle();
+
+            ExternalCourseEntity entity = externalCourseRepository.findById(courseTitle)
+                    .orElseGet(() -> {
+                        try {
+                            ExternalCourse external = codeAssessmentProvider.getExternalCourse(courseTitle, currentUser);
+                            ExternalCourseEntity newEntity = new ExternalCourseEntity(courseTitle, external.getUrl());
+                            return externalCourseRepository.save(newEntity);
+                        } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
+                            return null;
+                        }
+                    });
+
+            if (entity == null) return null;
+
+            return new ExternalCourse(entity.getCourseTitle(), entity.getUrl());
+
+        } catch (Exception e) {
+            log.error("Failed to get external course for course {}: {}", courseId, e.getMessage(), e);
+            return null;
+        }
+    }
+
+
 }

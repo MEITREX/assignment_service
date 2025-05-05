@@ -49,6 +49,11 @@ public class AssignmentController {
     }
 
     @QueryMapping
+    public ExternalCourse getExternalCourse(@Argument final UUID courseId, @ContextValue final LoggedInUser currentUser) {
+        return assignmentService.getExternalCourse(courseId, currentUser);
+    }
+
+    @QueryMapping
     public Grading getGradingForAssignmentForStudent(@Argument final UUID assessmentId, @Argument final UUID studentId, @ContextValue final LoggedInUser currentUser) {
         return gradingService.getGradingForAssignmentForStudent(assessmentId, studentId, currentUser);
     }

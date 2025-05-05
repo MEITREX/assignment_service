@@ -4,6 +4,7 @@ import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatfor
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.generated.dto.Assignment;
+import de.unistuttgart.iste.meitrex.generated.dto.ExternalCourse;
 import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 
@@ -14,6 +15,8 @@ public interface CodeAssessmentProvider {
     List<ExternalGrading> syncGrades(String externalAssignmentId, LoggedInUser currentUser) throws ExternalPlatformConnectionException, UserServiceConnectionException;
     String findRepository(String assignmentName, LoggedInUser currentUser) throws ExternalPlatformConnectionException, UserServiceConnectionException;
     ExternalGrading syncGradeForStudent(String repoLink, LoggedInUser currentUser)
+            throws ExternalPlatformConnectionException, UserServiceConnectionException;
+    ExternalCourse getExternalCourse(String courseTitle, LoggedInUser currentUser)
             throws ExternalPlatformConnectionException, UserServiceConnectionException;
 }
 

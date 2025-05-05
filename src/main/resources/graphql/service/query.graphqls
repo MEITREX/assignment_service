@@ -24,17 +24,24 @@ type Query {
 
     """
     Gets all the available external exercises.
-    CourseId is the id of the course the user is currently working is.
+    CourseId is the id of the course the user is currently working in.
     🔒 The user must be an admin in the course. Otherwise null is returned.
     """
     getExternalAssignments(courseId: UUID!): [ExternalAssignment!]!
 
     """
     Gets all the available external code exercises.
-    CourseId is the id of the course the user is currently working is.
+    CourseId is the id of the course the user is currently working in.
     🔒 The user must be an admin in the course. Otherwise null is returned.
     """
     getExternalCodeAssignments(courseId: UUID!): [String!]!
+
+    """
+    Get the corresponding external course for the given courseId.
+    CourseId is the id of the course the user is currently working in.
+    🔒 The user must be an admin in the course. Otherwise null is returned.
+    """
+    getExternalCourse(courseId: UUID!): ExternalCourse
 
 
     """
@@ -42,4 +49,16 @@ type Query {
     🔒 The user must be an admin in the course. Otherwise null is returned.
     """
     getManualMappingInstances(courseId: UUID!): [ManualMappingInstance]!
+}
+
+type ExternalCourse {
+    """
+    The name of the course.
+    """
+    courseTitle: String!
+
+    """
+    The url to the course.
+    """
+    url: String!
 }
