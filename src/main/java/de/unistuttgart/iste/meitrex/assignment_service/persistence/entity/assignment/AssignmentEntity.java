@@ -29,8 +29,9 @@ public class AssignmentEntity implements IWithId<UUID> {
     @Column(nullable = true)
     private OffsetDateTime date;
 
-    @Column(nullable = false)
-    private double totalCredits;
+    //GitHub Classroom cool design allows to query the credits only when there is a grading, i.e. a student pushed code
+    @Column(nullable = true)
+    private Double totalCredits;
 
     @Column(nullable = false)
     private AssignmentType assignmentType;

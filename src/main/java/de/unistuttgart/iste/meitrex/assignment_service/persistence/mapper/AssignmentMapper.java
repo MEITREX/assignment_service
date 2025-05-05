@@ -28,20 +28,26 @@ public class AssignmentMapper {
             return null;
         }
 
-        MatchingStrategy originalStrategy = modelMapper.getConfiguration().getMatchingStrategy();
-        modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
+//        MatchingStrategy originalStrategy = modelMapper.getConfiguration().getMatchingStrategy();
+//        modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
         Assignment mappedAssignment = modelMapper.map(assignmentEntity, Assignment.class);
 
         if (assignmentEntity.getAssignmentType() != AssignmentType.CODE_ASSIGNMENT) {
             mappedAssignment.setExercises(assignmentEntity.getExercises().stream().map(this::exerciseEntityToDto).toList());
         } else {
-            CodeAssignmentMetadataEntity meta = assignmentEntity.getCodeAssignmentMetadata();
-            mappedAssignment.setAssignmentLink(meta.getAssignmentLink());
-            mappedAssignment.setInvitationLink(meta.getInvitationLink());
-            mappedAssignment.setReadmeHtml(meta.getReadmeHtml());
+            CodeAssignmentMetadataEntity metadataEntity = assignmentEntity.getCodeAssignmentMetadata();
+            CodeAssignmentMetadata metadata = mappedAssignment.getCodeAssignmentMetadata();
+
+            if (metadataEntity == null || metadata == null) {
+                throw new IllegalStateException("Missing metadata for CODE_ASSIGNMENT: " + assignmentEntity.getAssessmentId());
+            }
+
+            metadata.setAssignmentLink(metadataEntity.getAssignmentLink());
+            metadata.setInvitationLink(metadataEntity.getInvitationLink());
+            metadata.setReadmeHtml(metadataEntity.getReadmeHtml());
         }
 
-        modelMapper.getConfiguration().setMatchingStrategy(originalStrategy);
+//        modelMapper.getConfiguration().setMatchingStrategy(originalStrategy);
         return mappedAssignment;
     }
 
@@ -127,8 +133,6 @@ public class AssignmentMapper {
                             .map(this::exerciseGradingEntityToDto)
                             .toList()
             );
-        } else {
-            mappedGrading.setExerciseGradings(Collections.emptyList());
         }
 
         return mappedGrading;

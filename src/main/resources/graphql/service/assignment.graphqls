@@ -26,7 +26,7 @@ type Assignment {
     """
     Number of total credits in the assignment.
     """
-    totalCredits: Float!
+    totalCredits: Float
 
     """
     Type of the assignment, e.g. exercise sheet or physical test.
@@ -49,6 +49,13 @@ type Assignment {
     """
     externalId: String
 
+    """
+    CodeAssignmentMetadata contains metadata for the external code assignment.
+    """
+    codeAssignmentMetadata: CodeAssignmentMetadata
+}
+
+type CodeAssignmentMetadata {
     """
     Link to the GitHub Classroom or equivalent (optional, CODE_ASSIGNMENT only).
     """

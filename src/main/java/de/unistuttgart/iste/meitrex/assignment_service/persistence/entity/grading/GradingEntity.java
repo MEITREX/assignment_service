@@ -31,7 +31,8 @@ public class GradingEntity implements IWithId<GradingEntity.PrimaryKey> {
     @Column(nullable = true)
     private OffsetDateTime date;
 
-    @Column(nullable = false)
+    // is not nullable, since code assignments must be cloned via repo link and only after pushing code achieved credits can be fetched
+    @Column(nullable = true)
     private double achievedCredits;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "parentGrading")
