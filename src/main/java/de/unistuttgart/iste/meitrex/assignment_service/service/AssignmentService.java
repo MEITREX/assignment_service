@@ -94,8 +94,6 @@ public class AssignmentService {
         mappedAssignmentEntity.setCourseId(courseId);
 
         if (createAssignmentInput.getAssignmentType() == AssignmentType.CODE_ASSIGNMENT) {
-            //GitHub Classroom cool design allows to query the credits only when there is a grading, i.e. a student pushed code
-            mappedAssignmentEntity.setTotalCredits(-1);
             this.createCodeAssignment(courseId, assessmentId, mappedAssignmentEntity, currentUser);
         }
 
@@ -112,6 +110,7 @@ public class AssignmentService {
                     .map(content -> content.getMetadata().getName())
                     .findFirst().orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
 
+            // external assignment should be synced already before the next line happens
             ExternalCodeAssignmentEntity externalAssignment = externalCodeAssignmentRepository.findById(new ExternalCodeAssignmentEntity.PrimaryKey(courseTitle, assignmentName))
                     .orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
 
@@ -141,6 +140,22 @@ public class AssignmentService {
             log.error("Failed to sync assignments for course {}: {}", courseTitle, e.getMessage());
             return false;
         }
+    }
+
+    public Assignment updateAssignment(UUID assessmentId,
+                                       UpdateAssignmentInput input,
+                                       LoggedInUser currentUser) {
+        AssignmentEntity assignment = assignmentRepository.findById(assessmentId)
+                .orElseThrow(() -> new EntityNotFoundException("Assignment not found"));
+
+        validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, assignment.getCourseId());
+
+        if (input.getRequiredPercentage() != null) {
+            assignment.setRequiredPercentage(input.getRequiredPercentage());
+        }
+
+        assignmentRepository.save(assignment);
+        return assignmentMapper.assignmentEntityToDto(assignment);
     }
 
 

@@ -11,6 +11,12 @@ type Mutation {
     _internal_noauth_createAssignment(courseId: UUID!, assessmentId: UUID!, input: CreateAssignmentInput!): Assignment!
 
     """
+    Update top-level fields of an assignment.
+    🔒 The user must be an admin in the course the assignment belongs to.
+    """
+    updateAssignment(assessmentId: UUID!, input: UpdateAssignmentInput!): Assignment!
+
+    """
     Modify an assignment.
     🔒 The user must be an admin in the course the assignment is in to perform this action.
     """
@@ -257,4 +263,8 @@ input SubexerciseCompletedInput {
     The absolute number of achieved credits.
     """
     achievedCredits: Float!
+}
+
+input UpdateAssignmentInput {
+    requiredPercentage: Float @Range(min: 0, max: 1)
 }

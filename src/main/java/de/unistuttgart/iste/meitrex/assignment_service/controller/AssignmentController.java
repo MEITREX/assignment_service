@@ -54,11 +54,6 @@ public class AssignmentController {
     }
 
     @QueryMapping
-    public Grading getGradingForAssignmentForStudent(@Argument final UUID assessmentId, @Argument final UUID studentId, @ContextValue final LoggedInUser currentUser) {
-        return gradingService.getGradingForAssignmentForStudent(assessmentId, studentId, currentUser);
-    }
-
-    @QueryMapping
     public List<Grading> getGradingsForAssignment(@Argument final UUID assessmentId, @ContextValue final LoggedInUser currentUser) {
         return gradingService.getGradingsForAssignment(assessmentId,  currentUser);
     }
@@ -80,6 +75,13 @@ public class AssignmentController {
                                        @Argument final UUID assessmentId,
                                        @Argument final CreateAssignmentInput input,  @ContextValue final LoggedInUser currentUser) {
         return assignmentService.createAssignment(courseId, assessmentId, input, currentUser);
+    }
+
+    @MutationMapping
+    public Assignment updateAssignment(@Argument UUID assessmentId,
+                                       @Argument UpdateAssignmentInput input,
+                                       @ContextValue LoggedInUser currentUser) {
+        return assignmentService.updateAssignment(assessmentId, input, currentUser);
     }
 
     @MutationMapping
