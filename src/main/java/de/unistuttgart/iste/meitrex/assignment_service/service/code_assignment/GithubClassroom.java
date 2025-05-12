@@ -27,6 +27,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -231,20 +232,24 @@ public class GithubClassroom implements CodeAssessmentProvider {
                 String username = obj.get("github_username").getAsString();
                 double achieved = obj.get("points_awarded").getAsDouble();
                 double total = obj.get("points_available").getAsDouble();
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")
-                        .withZone(ZoneId.of("UTC"));
 
-                ZonedDateTime zonedDateTime = ZonedDateTime.parse(
-                        obj.get("submission_timestamp").getAsString(),
-                        formatter
-                );
-
-                OffsetDateTime submissionDate = zonedDateTime.toOffsetDateTime();
+                OffsetDateTime submissionDate = null;
+                String timestamp = obj.get("submission_timestamp").getAsString();
+                if (timestamp != null && !timestamp.isBlank()) {
+                    try {
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")
+                                .withZone(ZoneId.of("UTC"));
+                        ZonedDateTime zonedDateTime = ZonedDateTime.parse(timestamp, formatter);
+                        submissionDate = zonedDateTime.toOffsetDateTime();
+                    } catch (DateTimeParseException ignored) {
+                    }
+                }
 
                 gradings.add(new ExternalGrading(username, null, submissionDate, null, achieved, total));
             }
 
             return gradings;
+
         } catch (IOException | InterruptedException e) {
             throw new ExternalPlatformConnectionException("Failed to fetch grades: " + e.getMessage());
         } catch (UserServiceConnectionException e) {
@@ -295,7 +300,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
             String lastlyTested = run.get("updated_at").getAsString();
 
             if (!status.equals("completed")){
-                return new ExternalGrading(null, status, OffsetDateTime.parse(lastlyTested), null, -1, -1);
+                return new ExternalGrading(null, status, OffsetDateTime.parse(lastlyTested), null, null, null);
             }
 
             // Download logs
@@ -360,8 +365,8 @@ public class GithubClassroom implements CodeAssessmentProvider {
         String[] lines = logs.split("\n");
         StringBuilder tableHtml = new StringBuilder("<table border=\"1\">\n");
 
-        // Step 1: Map short runner keys to full test names (for ✅ and ❌)
-        Map<String, String> runnerNameToTitle = new HashMap<>();
+        // Step 1: Build an ordered list of runner test names
+        List<String> resolvedNames = new ArrayList<>();
         Pattern processingPattern = Pattern.compile("Processing: ([\\w\\-]+)");
         Pattern titlePattern = Pattern.compile("[✅❌] ([A-Z].+)");
         String lastRunner = null;
@@ -372,13 +377,15 @@ public class GithubClassroom implements CodeAssessmentProvider {
             if (m1.find()) {
                 lastRunner = m1.group(1).trim();
             } else if (m2.find() && lastRunner != null) {
-                runnerNameToTitle.put(lastRunner, m2.group(1).trim());
+                resolvedNames.add(m2.group(1).trim());
                 lastRunner = null;
             }
         }
 
-        // Step 2: Extract and rewrite the grading table
+        // Step 2: Extract the grading table and match by row order
         boolean inTable = false;
+        int resolvedIndex = 0;
+
         for (String line : lines) {
             line = line.trim();
             if (line.contains("Test runner summary")) {
@@ -388,7 +395,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
             if (!inTable) continue;
 
             if (line.startsWith("┌") || line.startsWith("├") || line.startsWith("└") || line.isEmpty()) {
-                continue; // Skip border lines and empty lines
+                continue; // Skip borders and empty lines
             }
 
             String[] cells = line.split("│");
@@ -406,25 +413,20 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     break;
                 }
 
-                String rawName = cells[1].trim();
                 String score = cells[2].trim();
+                String resolvedName = resolvedIndex < resolvedNames.size() ? resolvedNames.get(resolvedIndex) : "Unknown";
+                resolvedIndex++;
 
-                // Try to map to full test name
-                String resolvedName = rawName;
-                for (String key : runnerNameToTitle.keySet()) {
-                    if (rawName.startsWith(key.substring(0, Math.min(key.length(), 10)))) {
-                        resolvedName = runnerNameToTitle.get(key);
-                        break;
-                    }
-                }
-
-                tableHtml.append("<tr><td>").append(resolvedName).append("</td><td style=\"text-align:center;\">").append(score).append("</td></tr>\n");
+                tableHtml.append("<tr><td>").append(resolvedName)
+                        .append("</td><td style=\"text-align:center;\">")
+                        .append(score).append("</td></tr>\n");
             }
         }
 
         tableHtml.append("</tbody></table>");
         return tableHtml.toString();
     }
+
 
 
 
