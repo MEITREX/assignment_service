@@ -102,10 +102,14 @@ public class GradingService {
                     .collect(Collectors.toList());
         }
 
-        if (assignment.getTotalCredits() == null) {
-            externalGradings.stream().findAny().ifPresent(randomExternalGrading -> assignment.setTotalCredits(randomExternalGrading.totalPoints()));
-            assignmentRepository.save(assignment);
-        }
+        externalGradings.stream()
+                .map(ExternalGrading::totalPoints)
+                .filter(Objects::nonNull)
+                .max(Double::compareTo)
+                .ifPresent(maxTotalPoints -> {
+                    assignment.setTotalCredits(maxTotalPoints);
+                    assignmentRepository.save(assignment);
+                });
 
         for (GradingEntity gradingEntity : gradings) {
             Optional<ExternalUserIdWithUser> student = externalStudentIds.stream()
@@ -138,18 +142,20 @@ public class GradingService {
         GradingEntity gradingEntity = gradingRepository.findById(pk).orElse(null);
 
         if (gradingEntity == null) {
+            gradingEntity = GradingEntity.builder().primaryKey(pk).build();
+
+            CodeAssignmentGradingMetadataEntity metadata = CodeAssignmentGradingMetadataEntity.builder()
+                    .grading(gradingEntity)
+                    .repoLink(null)
+                    .status(null)
+                    .feedbackTableHtml(null)
+                    .build();
+
+            gradingEntity.setCodeAssignmentGradingMetadata(metadata);
+        }
+
+        if (gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink() == null) {
             try {
-                gradingEntity = GradingEntity.builder().primaryKey(pk).build();
-
-                CodeAssignmentGradingMetadataEntity metadata = CodeAssignmentGradingMetadataEntity.builder()
-                        .grading(gradingEntity)
-                        .repoLink(null)
-                        .status(null)
-                        .feedbackTableHtml(null)
-                        .build();
-
-                gradingEntity.setCodeAssignmentGradingMetadata(metadata);
-
                 String assignmentName = contentServiceClient.queryContentsOfCourse(currentUser.getId(), assignment.getCourseId()).stream()
                         .filter(assignmentDto -> assignmentDto.getId().equals(assignment.getId()))
                         .findFirst()
@@ -181,7 +187,7 @@ public class GradingService {
             metadata.setFeedbackTableHtml(externalGrading.tableHtml());
             gradingEntity.setDate(externalGrading.date());
 
-            if (assignment.getTotalCredits() == null) {
+            if (assignment.getTotalCredits() == null || (externalGrading.totalPoints() != null && externalGrading.totalPoints() > assignment.getTotalCredits())) {
                 assignment.setTotalCredits(externalGrading.totalPoints());
             }
         }

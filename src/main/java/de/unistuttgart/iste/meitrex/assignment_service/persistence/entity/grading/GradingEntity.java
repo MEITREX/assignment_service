@@ -33,7 +33,7 @@ public class GradingEntity implements IWithId<GradingEntity.PrimaryKey> {
 
     // is not nullable, since code assignments must be cloned via repo link and only after pushing code achieved credits can be fetched
     @Column(nullable = true)
-    private double achievedCredits;
+    private Double achievedCredits;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "parentGrading")
     private List<ExerciseGradingEntity> exerciseGradings;

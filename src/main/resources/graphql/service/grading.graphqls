@@ -20,7 +20,7 @@ type Grading {
     """
     The absolute number of achieved credits on the assignment.
     """
-    achievedCredits: Float!
+    achievedCredits: Float
 
     """
     CodeAssignmentGradingMetadata contains metadata for the external code assignment grading.
