@@ -37,6 +37,30 @@ import java.util.zip.ZipInputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * GitHub Classroom integration for the MEITREX assignment service.
+ * <p>
+ * This component provides functionality to:
+ * <ul>
+ *     <li>Fetch and synchronize external courses and assignments from GitHub Classroom</li>
+ *     <li>Extract README content and metadata for assignments</li>
+ *     <li>Find student repositories based on assignment names and GitHub usernames</li>
+ *     <li>Synchronize grading data either in bulk or per student using GitHub Actions workflow logs</li>
+ * </ul>
+ * <p>
+ * It uses the GitHub REST API and HTML rendering API to interact with GitHub Classroom and GitHub Repositories.
+ * Authentication is handled using per-user OAuth access tokens, retrieved from {@link UserServiceClient}.
+ * </p>
+ *
+ * <p><b>Note:</b> This class is marked with {@code @Primary}, meaning it is the default implementation
+ * of {@link CodeAssessmentProvider} in Spring’s context.</p>
+ *
+ * @see CodeAssessmentProvider
+ * @see ExternalCodeAssignmentEntity
+ * @see ExternalGrading
+ * @see UserServiceClient
+ */
+
 @Slf4j
 @Component
 @Primary
@@ -427,10 +451,6 @@ public class GithubClassroom implements CodeAssessmentProvider {
         return tableHtml.toString();
     }
 
-
-
-
-
     @Override
     public String findRepository(final String assignmentName, final LoggedInUser currentUser)
             throws ExternalPlatformConnectionException, UserServiceConnectionException {
@@ -496,51 +516,4 @@ public class GithubClassroom implements CodeAssessmentProvider {
             throw new ExternalPlatformConnectionException("Error fetching external course: " + e.getMessage());
         }
     }
-
-//    @Override
-//    public String findRepository(final AssignmentEntity assignment, final LoggedInUser currentUser)
-//            throws ExternalPlatformConnectionException, UserServiceConnectionException {
-//
-//        try {
-//            AccessToken queryTokenResponse = userServiceClient.queryAccessToken(currentUser, NAME);
-//            String token = queryTokenResponse.getAccessToken();
-//            String githubUsername = queryTokenResponse.getExternalUserId();
-//
-//            HttpRequest request = HttpRequest.newBuilder()
-//                    .uri(URI.create(BASE_PATH + "/assignments/" + assignment.getExternalId() + "/accepted_assignments"))
-//                    .header("Accept", "application/vnd.github+json")
-//                    .header("Authorization", "Bearer " + token)
-//                    .header("X-GitHub-Api-Version", VERSION)
-//                    .GET()
-//                    .build();
-//
-//            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-//
-//            if (response.statusCode() != 200) {
-//                throw new ExternalPlatformConnectionException("Failed to fetch accepted assignments: " + response.body());
-//            }
-//
-//            JsonArray acceptedArray = JsonParser.parseString(response.body()).getAsJsonArray();
-//
-//            for (JsonElement element : acceptedArray) {
-//                JsonObject obj = element.getAsJsonObject();
-//                JsonArray students = obj.getAsJsonArray("students");
-//
-//                for (JsonElement studentElement : students) {
-//                    JsonObject student = studentElement.getAsJsonObject();
-//                    if (student.get("login").getAsString().equalsIgnoreCase(githubUsername)) {
-//                        JsonObject repository = obj.getAsJsonObject("repository");
-//                        if (repository != null && repository.has("html_url")) {
-//                            return repository.get("html_url").getAsString();
-//                        }
-//                    }
-//                }
-//            }
-//
-//            return null;
-//
-//        } catch (IOException | InterruptedException e) {
-//            throw new ExternalPlatformConnectionException("Error fetching student repo link: " + e.getMessage());
-//        }
-//    }
 }

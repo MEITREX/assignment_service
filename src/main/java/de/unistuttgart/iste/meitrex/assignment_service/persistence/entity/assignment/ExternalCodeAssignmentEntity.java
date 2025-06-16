@@ -1,6 +1,5 @@
 package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
 import de.unistuttgart.iste.meitrex.common.persistence.IWithId;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -10,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Entity(name = "ExternalCodeAssignment")
 @Data
