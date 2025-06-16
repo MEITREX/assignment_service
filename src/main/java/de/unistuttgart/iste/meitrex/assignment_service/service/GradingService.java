@@ -72,7 +72,9 @@ public class GradingService {
     public List<Grading> getGradingsForAssignment(final UUID assignmentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId);
 
-        LoggedInUser.CourseMembership courseMembership = (LoggedInUser.CourseMembership) currentUser.getCourseMemberships().stream().filter((membership) -> membership.getCourseId().equals(assignment.getCourseId())).findFirst().orElseThrow(() -> new NoAccessToCourseException(assignment.getCourseId(), "User is not a member of the course."));
+        LoggedInUser.CourseMembership courseMembership = (LoggedInUser.CourseMembership) currentUser.getCourseMemberships().stream()
+                        .filter((membership) -> membership.getCourseId().equals(assignment.getCourseId())).findFirst()
+                        .orElseThrow(() -> new NoAccessToCourseException(assignment.getCourseId(), "User is not a member of the course."));
 
         if (assignment.getAssignmentType() == AssignmentType.CODE_ASSIGNMENT){
             if (courseMembership.getRole() == LoggedInUser.UserRoleInCourse.STUDENT) {
