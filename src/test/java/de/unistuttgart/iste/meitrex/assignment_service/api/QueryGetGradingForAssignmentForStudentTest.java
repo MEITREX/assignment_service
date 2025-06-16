@@ -37,7 +37,7 @@ public class QueryGetGradingForAssignmentForStudentTest {
     private AssignmentMapper assignmentMapper;
 
     @InjectCurrentUserHeader
-    private final LoggedInUser loggedInUser = userWithMembershipInCourseWithId(courseId, LoggedInUser.UserRoleInCourse.ADMINISTRATOR);
+    private final LoggedInUser loggedInUser = userWithMembershipInCourseWithId(courseId, LoggedInUser.UserRoleInCourse.STUDENT);
 
     @Autowired
     private TestUtils testUtils;
@@ -45,11 +45,11 @@ public class QueryGetGradingForAssignmentForStudentTest {
     @Test
     void testQueryGetGradingValidFirstGrading(final GraphQlTester tester) {
         final AssignmentEntity assignmentEntity = testUtils.populateAssignmentRepository(assignmentRepository, courseId);
-        final List<GradingEntity> originalGradingEntities = testUtils.populateGradingRepository(gradingRepository, assignmentEntity);
+        final List<GradingEntity> originalGradingEntities = testUtils.populateGradingRepository(gradingRepository, assignmentEntity, loggedInUser.getId());
 
         final String query = """
-                query($assignmentId: UUID!, $studentId: UUID!) {
-                    getGradingForAssignmentForStudent(assessmentId: $assignmentId, studentId: $studentId) {
+                query($assignmentId: UUID!) {
+                    getGradingsForAssignment(assessmentId: $assignmentId) {
                         assessmentId
                         studentId
                         date
@@ -72,11 +72,13 @@ public class QueryGetGradingForAssignmentForStudentTest {
 
         Grading receivedGradingEntity = tester.document(query)
                 .variable("assignmentId", assignmentEntity.getAssessmentId())
-                .variable("studentId", gradingEntity1.getPrimaryKey().getStudentId())
                 .execute()
-                .path("getGradingForAssignmentForStudent")
-                .entity(Grading.class)
-                .get();
+                .path("getGradingsForAssignment")
+                .entityList(Grading.class)
+                .hasSize(1)
+                .get()
+                .get(0);
+
 
         // times need to be adjusted because repository (presumably) rounds to milliseconds and converts to UTC
         gradingEntity1.setDate(gradingEntity1.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
@@ -84,51 +86,6 @@ public class QueryGetGradingForAssignmentForStudentTest {
 
 
         assertThat(assignmentMapper.gradingEntityToDto(gradingEntity1), is(receivedGradingEntity));
-    }
-
-
-    @Test
-    void testQueryGetGradingValidThirdGrading(final GraphQlTester tester) {
-        final AssignmentEntity assignmentEntity = testUtils.populateAssignmentRepository(assignmentRepository, courseId);
-        final List<GradingEntity> originalGradingEntities = testUtils.populateGradingRepository(gradingRepository, assignmentEntity);
-
-        final String query = """
-                query($assignmentId: UUID!, $studentId: UUID!) {
-                    getGradingForAssignmentForStudent(assessmentId: $assignmentId, studentId: $studentId) {
-                        assessmentId
-                        studentId
-                        date
-                        achievedCredits
-                        exerciseGradings {
-                            itemId
-                            studentId
-                            achievedCredits
-                            subexerciseGradings {
-                                itemId
-                                studentId
-                                achievedCredits
-                            }
-                        }
-                    }
-                }
-                """;
-
-        GradingEntity gradingEntity3 = originalGradingEntities.get(2);
-
-        Grading receivedGradingEntity = tester.document(query)
-                .variable("assignmentId", assignmentEntity.getAssessmentId())
-                .variable("studentId", gradingEntity3.getPrimaryKey().getStudentId())
-                .execute()
-                .path("getGradingForAssignmentForStudent")
-                .entity(Grading.class)
-                .get();
-
-
-        // times need to be adjusted because repository (presumably) rounds to milliseconds and converts to UTC
-        gradingEntity3.setDate(gradingEntity3.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
-        receivedGradingEntity.setDate(receivedGradingEntity.getDate().truncatedTo(ChronoUnit.MILLIS).withOffsetSameInstant(ZoneOffset.UTC));
-
-        assertThat(assignmentMapper.gradingEntityToDto(gradingEntity3), is(receivedGradingEntity));
     }
 
 }

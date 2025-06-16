@@ -312,7 +312,7 @@ public class MutationLogAssignmentCompletedTest {
     @Test
     void testValidLogAssignmentCompletedZeroCredits(final GraphQlTester tester) {
         final AssignmentEntity assignmentEntity = testUtils.populateAssignmentRepository(assignmentRepository, courseId);
-        assignmentEntity.setTotalCredits(0);
+        assignmentEntity.setTotalCredits(0.0);
         assignmentEntity.getExercises().forEach(exercise -> exercise.setTotalExerciseCredits(0));
         assignmentEntity.getExercises().forEach(exercise -> exercise.getSubexercises().forEach(subexercise -> subexercise.setTotalSubexerciseCredits(0)));
         assignmentRepository.save(assignmentEntity);

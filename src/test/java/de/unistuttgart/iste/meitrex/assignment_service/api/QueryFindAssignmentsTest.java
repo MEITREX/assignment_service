@@ -59,6 +59,7 @@ public class QueryFindAssignmentsTest {
                         assignmentType
                         description
                         requiredPercentage
+                        externalId
                     }
                 }
                 """;
@@ -100,6 +101,7 @@ public class QueryFindAssignmentsTest {
                         assignmentType
                         description
                         requiredPercentage
+                        externalId
                     }
                 }
                 """;

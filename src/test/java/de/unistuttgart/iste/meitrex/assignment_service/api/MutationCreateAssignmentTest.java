@@ -1,6 +1,9 @@
 package de.unistuttgart.iste.meitrex.assignment_service.api;
 
 import de.unistuttgart.iste.meitrex.common.testutil.GraphQlApiTest;
+import de.unistuttgart.iste.meitrex.common.testutil.InjectCurrentUserHeader;
+import de.unistuttgart.iste.meitrex.common.testutil.TestUsers;
+import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.graphql.test.tester.GraphQlTester;
@@ -15,6 +18,12 @@ import static org.hamcrest.Matchers.*;
 
 @GraphQlApiTest
 public class MutationCreateAssignmentTest {
+
+    private final UUID courseId = UUID.randomUUID();
+
+    @InjectCurrentUserHeader
+    private final LoggedInUser mockUser = TestUsers.userWithMembershipInCourseWithId(courseId, LoggedInUser.UserRoleInCourse.ADMINISTRATOR);
+
 
     @Test
     void testCreateAssignment(final GraphQlTester tester) {
