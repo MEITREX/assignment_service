@@ -64,6 +64,18 @@ public class AssignmentService {
                 .toList();
     }
 
+    /**
+     * Retrieves the names of external code assignments associated with the given course.
+     * <p>
+     * This method fetches assignment names for the course with the same title as the course
+     * identified by {@code courseId}. The current user must have administrator access to the course.
+     * </p>
+     *
+     * @param courseId    the UUID of the course for which to retrieve assignment names
+     * @param currentUser the user requesting the information; must have administrator access to the course
+     * @return a list of assignment names for the course, or an empty list if access is denied
+     *         or an error occurs during the process
+     */
     public List<String> getExternalCodeAssignments(final UUID courseId, final LoggedInUser currentUser) {
         try {
             validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
@@ -76,16 +88,22 @@ public class AssignmentService {
     }
 
     /**
-     * Creates a new assignment
+     * Creates and persists a new assignment linked to the given assessment and course.
+     * <p>
+     * If the assignment type is {@link AssignmentType#CODE_ASSIGNMENT}, the method additionally enriches
+     * the assignment with metadata from an external provider (e.g., GitHub Classroom), such as due date,
+     * links, and README content.
+     * </p>
      *
-     * @param courseId id of the course the assignment is in
-     *                 (must be the same as the course id of the assessment)
-     * @param assessmentId id of the corresponding assessment
-     * @param createAssignmentInput input data for creating the assignment
-     * @return A new assignment
-     * @throws ValidationException if the assignment input is invalid according
-     *                              to {@link AssignmentValidator#validateCreateAssignmentInput(CreateAssignmentInput)}
+     * @param courseId              the ID of the course to which the assignment belongs
+     * @param assessmentId          the ID of the assessment the assignment is linked to
+     * @param createAssignmentInput the input data for creating the assignment
+     * @param currentUser           the currently logged-in user; must have access to the course
+     * @return the created assignment as a DTO
+     * @throws ValidationException if the input is invalid
+     * @throws IllegalStateException if the assignment type is CODE_ASSIGNMENT and the enrichment from the external provider fails
      */
+
     public Assignment createAssignment(final UUID courseId, final UUID assessmentId, final CreateAssignmentInput createAssignmentInput, final LoggedInUser currentUser) {
         assignmentValidator.validateCreateAssignmentInput(createAssignmentInput);
 
@@ -110,7 +128,7 @@ public class AssignmentService {
                     .map(content -> content.getMetadata().getName())
                     .findFirst().orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
 
-            // external assignment should be synced already before the next line happens
+            // external assignment must be synced already before the next line happens
             ExternalCodeAssignmentEntity externalAssignment = externalCodeAssignmentRepository.findById(new ExternalCodeAssignmentEntity.PrimaryKey(courseTitle, assignmentName))
                     .orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
 
@@ -128,20 +146,53 @@ public class AssignmentService {
             assignmentEntity.setCodeAssignmentMetadata(metadata);
             externalCodeAssignmentRepository.delete(externalAssignment);
         } catch (Exception e) {
-            throw new ValidationException("Failed to enrich code assignment from GitHub Classroom", e);
+            throw new IllegalStateException("Failed to enrich code assignment from GitHub Classroom", e);
         }
     }
 
-    public boolean syncAssignmentsForCourse(final String courseTitle, final LoggedInUser currentUser) {
+    /**
+     * Synchronizes external code assignments for the specified course using the external code assessment provider.
+     * <p>
+     * This method:
+     * <ul>
+     *     <li>Validates that the {@code currentUser} has ADMINISTRATOR access to the specified course.</li>
+     *     <li>Invokes {@link CodeAssessmentProvider#syncAssignmentsForCourse(String, LoggedInUser)} to fetch and persist
+     *         the latest external assignments (e.g., from GitHub Classroom).</li>
+     * </ul>
+     * </p>
+     *
+     * @param courseId    the UUID of the internal MEITREX course whose assignments should be synced
+     * @param currentUser the user initiating the sync operation; must have ADMINISTRATOR access to the course
+     * @return {@code true} if synchronization was successful, {@code false} if any error occurred (e.g., access denied,
+     *         external platform failure, or unexpected exception)
+     */
+    public boolean syncAssignmentsForCourse(final UUID courseId, final LoggedInUser currentUser) {
         try {
+            validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, courseId);
+            String courseTitle = courseServiceClient.queryCourseById(courseId).getTitle();
             codeAssessmentProvider.syncAssignmentsForCourse(courseTitle, currentUser);
             return true;
         } catch (Exception e) {
-            log.error("Failed to sync assignments for course {}: {}", courseTitle, e.getMessage());
+            log.error("Failed to sync assignments for course {}: {}", courseId, e.getMessage());
             return false;
         }
     }
 
+    /**
+     * Updates the metadata of an existing assignment.
+     * <p>
+     * Currently, this method allows updating the {@code requiredPercentage} field, which defines the
+     * minimum percentage of credits required to successfully complete the assignment.
+     * </p>
+     * <p>
+     *
+     * @param assessmentId the ID of the assignment (corresponds to the content ID of the assessment)
+     * @param input        the new data to apply to the assignment
+     * @param currentUser  the user performing the update; must be an ADMINISTRATOR of the course
+     * @return the updated {@link Assignment} DTO
+     * @throws EntityNotFoundException if the assignment does not exist
+     * @throws ValidationException     if the user lacks required access rights
+     */
     public Assignment updateAssignment(UUID assessmentId,
                                        UpdateAssignmentInput input,
                                        LoggedInUser currentUser) {
@@ -515,6 +566,23 @@ public class AssignmentService {
     private void publishItemChangeEvent(final UUID itemId) {
         topicPublisher.notifyItemChanges(itemId, CrudOperation.DELETE);
     }
+
+    /**
+     * Retrieves the external course details (title and URL) for a given internal course ID.
+     * <p>
+     * If the external course is not already cached in the local database, it attempts to fetch it
+     * from the external code assessment provider (e.g., GitHub Classroom) and saves it.
+     * </p>
+     *
+     * @param courseId     the internal UUID of the MEITREX course.
+     * @param currentUser  the currently logged-in user, whose role will be validated.
+     * @return the {@link ExternalCourse} if found and accessible, or {@code null} if:
+     *         <ul>
+     *             <li>the user does not have ADMINISTRATOR access to the course</li>
+     *             <li>an error occurs while contacting the external platform or user service</li>
+     *             <li>no such external course can be resolved</li>
+     *         </ul>
+     */
 
     public ExternalCourse getExternalCourse(final UUID courseId, final LoggedInUser currentUser) {
         try {

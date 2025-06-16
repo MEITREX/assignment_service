@@ -102,8 +102,8 @@ public class AssignmentController {
     }
 
     @MutationMapping
-    public boolean syncAssignmentsForCourse(@Argument final String courseTitle, @ContextValue final LoggedInUser currentUser) {
-        return assignmentService.syncAssignmentsForCourse(courseTitle, currentUser);
+    public boolean syncAssignmentsForCourse(@Argument final UUID courseId, @ContextValue final LoggedInUser currentUser) {
+        return assignmentService.syncAssignmentsForCourse(courseId, currentUser);
     }
 
     /* Schema Mappings */

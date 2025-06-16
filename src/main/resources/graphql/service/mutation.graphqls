@@ -40,7 +40,7 @@ type Mutation {
     """
     Fetches assignment info from external code assessment provider for the given course
     """
-    syncAssignmentsForCourse(courseTitle: String!): Boolean!
+    syncAssignmentsForCourse(courseId: UUID!): Boolean!
 }
 
 type AssignmentMutation {

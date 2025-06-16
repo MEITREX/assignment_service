@@ -31,7 +31,7 @@ public class GradingEntity implements IWithId<GradingEntity.PrimaryKey> {
     @Column(nullable = true)
     private OffsetDateTime date;
 
-    // is not nullable, since code assignments must be cloned via repo link and only after pushing code achieved credits can be fetched
+    // is nullable, since for code assignments only after pushing code achieved credits can be fetched
     @Column(nullable = true)
     private Double achievedCredits;
 
