@@ -72,7 +72,7 @@ public class GradingService {
     public List<Grading> getGradingsForAssignment(final UUID assignmentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId);
 
-        LoggedInUser.CourseMembership courseMembership = (LoggedInUser.CourseMembership) currentUser.getCourseMemberships().stream()
+        LoggedInUser.CourseMembership courseMembership = currentUser.getCourseMemberships().stream()
                         .filter((membership) -> membership.getCourseId().equals(assignment.getCourseId())).findFirst()
                         .orElseThrow(() -> new NoAccessToCourseException(assignment.getCourseId(), "User is not a member of the course."));
 
@@ -90,20 +90,25 @@ public class GradingService {
     private List<Grading> getCodeAssignmentGradingForAdmin(final AssignmentEntity assignment, final LoggedInUser currentUser) {
         List<GradingEntity> gradings = gradingRepository.findAllByPrimaryKey_AssessmentId(assignment.getId());
         List<ExternalGrading> externalGradings;
-        List<ExternalUserIdWithUser> externalStudentIds;
+        Map<UUID, String> userIdToExternalId;
         try {
             externalGradings = codeAssessmentProvider.syncGrades(assignment.getExternalId(), currentUser);
             List<UUID> studentIds = getMeitrexStudentInfoList(assignment.getCourseId()).stream()
                     .map(UserInfo::getId)
                     .toList();
-            externalStudentIds = userServiceClient.queryExternalUserIds(codeAssessmentProvider.getName(), studentIds);
-        } catch (ExternalPlatformConnectionException | UserServiceConnectionException | CourseServiceConnectionException e) {
+            List<ExternalUserIdWithUser> externalStudentIds = userServiceClient.queryExternalUserIds(codeAssessmentProvider.getName(), studentIds);
+            userIdToExternalId = externalStudentIds.stream()
+                    .collect(Collectors.toMap(ExternalUserIdWithUser::getUserId, ExternalUserIdWithUser::getExternalUserId));
+        } catch (ExternalPlatformConnectionException | UserServiceConnectionException |
+                 CourseServiceConnectionException e) {
             log.error("Failed to sync student grades for assignment {}: {}", assignment.getId(), e.toString());
             return gradings.stream()
                     .map(assignmentMapper::gradingEntityToDto)
                     .collect(Collectors.toList());
         }
 
+        // we must update the total credits of the assignment based on the maximum total points from the external gradings
+        // since GH Api is buggy and doesn't provide the total points before the first grading
         externalGradings.stream()
                 .map(ExternalGrading::totalPoints)
                 .filter(Objects::nonNull)
@@ -113,15 +118,16 @@ public class GradingService {
                     assignmentRepository.save(assignment);
                 });
 
+        // we go only over existing gradings, since students who have not accepted the assignment yet
+        // will not have a gradingEntity in the database (one is created because we store repo link)
+        // thus they won't have done the assignment
         for (GradingEntity gradingEntity : gradings) {
-            Optional<ExternalUserIdWithUser> student = externalStudentIds.stream()
-                    .filter(e -> e.getUserId().equals(gradingEntity.getPrimaryKey().getStudentId()))
-                    .findFirst();
-
-            if (student.isEmpty()) continue;
+            UUID studentId = gradingEntity.getPrimaryKey().getStudentId();
+            String externalUserId = userIdToExternalId.get(studentId);
+            if (externalUserId == null) continue;
 
             ExternalGrading externalGrading = externalGradings.stream()
-                    .filter(g -> g.externalUsername().equals(student.get().getExternalUserId()))
+                    .filter(g -> g.externalUsername().equals(externalUserId))
                     .findFirst()
                     .orElse(null);
 
@@ -135,7 +141,6 @@ public class GradingService {
         return gradings.stream()
                 .map(assignmentMapper::gradingEntityToDto)
                 .toList();
-
     }
 
 
@@ -154,9 +159,7 @@ public class GradingService {
                     .build();
 
             gradingEntity.setCodeAssignmentGradingMetadata(metadata);
-        }
 
-        if (gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink() == null) {
             try {
                 String assignmentName = contentServiceClient.queryContentsOfCourse(currentUser.getId(), assignment.getCourseId()).stream()
                         .filter(assignmentDto -> assignmentDto.getId().equals(assignment.getId()))
@@ -184,10 +187,11 @@ public class GradingService {
             }
 
             gradingEntity.setAchievedCredits(externalGrading.achievedPoints());
+            gradingEntity.setDate(externalGrading.date());
+
             CodeAssignmentGradingMetadataEntity metadata = gradingEntity.getCodeAssignmentGradingMetadata();
             metadata.setStatus(externalGrading.status());
             metadata.setFeedbackTableHtml(externalGrading.tableHtml());
-            gradingEntity.setDate(externalGrading.date());
 
             if (assignment.getTotalCredits() == null || (externalGrading.totalPoints() != null && externalGrading.totalPoints() > assignment.getTotalCredits())) {
                 assignment.setTotalCredits(externalGrading.totalPoints());

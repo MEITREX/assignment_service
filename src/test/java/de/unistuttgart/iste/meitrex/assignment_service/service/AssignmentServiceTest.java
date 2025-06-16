@@ -3,6 +3,7 @@ package de.unistuttgart.iste.meitrex.assignment_service.service;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExternalCourseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.CodeAssignmentMetadataEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
@@ -19,8 +20,11 @@ import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.content_service.client.ContentServiceClient;
 import de.unistuttgart.iste.meitrex.course_service.client.CourseServiceClient;
 import de.unistuttgart.iste.meitrex.course_service.exception.CourseServiceConnectionException;
+import de.unistuttgart.iste.meitrex.generated.dto.AssignmentType;
 import de.unistuttgart.iste.meitrex.generated.dto.Course;
 import de.unistuttgart.iste.meitrex.generated.dto.ExternalCourse;
+import de.unistuttgart.iste.meitrex.generated.dto.UpdateAssignmentInput;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -164,6 +168,68 @@ public class AssignmentServiceTest {
             verify(assignmentRepository, never()).deleteAllById(any());
         }
     }
+
+    @Test
+    void updateCodeAssignment_UpdatesRequiredPercentage() {
+        UUID assessmentId = UUID.randomUUID();
+
+        AssignmentEntity assignmentEntity = AssignmentEntity.builder()
+                .assessmentId(assessmentId)
+                .assignmentType(AssignmentType.CODE_ASSIGNMENT)
+                .courseId(courseId)
+                .requiredPercentage(0.5)
+                .build();
+
+        CodeAssignmentMetadataEntity metadata = CodeAssignmentMetadataEntity.builder()
+                .assignment(assignmentEntity)
+                .assignmentLink("link")
+                .invitationLink("link")
+                .build();
+
+        assignmentEntity.setCodeAssignmentMetadata(metadata);
+
+        double newPercentage = 0.8;
+        UpdateAssignmentInput input = UpdateAssignmentInput.builder()
+                .setRequiredPercentage(newPercentage)
+                .build();
+
+        when(assignmentRepository.findById(assessmentId)).thenReturn(Optional.of(assignmentEntity));
+        when(assignmentRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0)); // return saved entity
+
+        var result = assignmentService.updateAssignment(assessmentId, input, loggedInUser);
+
+        assertNotNull(result);
+        assertEquals(newPercentage, result.getRequiredPercentage());
+        verify(assignmentRepository).save(assignmentEntity);
+    }
+
+    @Test
+    void updateAssignment_ThrowsIfAssignmentNotFound() {
+        UUID assessmentId = UUID.randomUUID();
+        UpdateAssignmentInput input = UpdateAssignmentInput.builder()
+                .setRequiredPercentage(0.75)
+                .build();
+
+        when(assignmentRepository.findById(assessmentId)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () ->
+                assignmentService.updateAssignment(assessmentId, input, loggedInUser));
+    }
+
+    @Test
+    void getExternalCodeAssignmentsReturnsNamesIfAccessible() throws CourseServiceConnectionException {
+        List<String> mockNames = List.of("Assignment A", "Assignment B");
+
+        when(courseServiceClient.queryCourseById(courseId)).thenReturn(mockCourse);
+        when(externalCodeAssignmentRepository.findAssignmentNamesByCourseTitle(courseTitle)).thenReturn(mockNames);
+
+        List<String> result = assignmentService.getExternalCodeAssignments(courseId, loggedInUser);
+
+        assertEquals(mockNames, result);
+        verify(courseServiceClient).queryCourseById(courseId);
+        verify(externalCodeAssignmentRepository).findAssignmentNamesByCourseTitle(courseTitle);
+    }
+
 
     @Test
     void returnsCourseFromDatabaseIfPresent() {

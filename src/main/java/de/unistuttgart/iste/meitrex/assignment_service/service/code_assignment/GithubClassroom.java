@@ -34,8 +34,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * GitHub Classroom integration for the MEITREX assignment service.
@@ -130,10 +128,17 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
                 String assignmentId = assignment.get("id").getAsString();
                 String assignmentName = assignment.get("title").getAsString();
+
+                boolean codeAssignmentAlreadyExists = assignmentRepository.existsByExternalId(assignmentId);
+
+                if (codeAssignmentAlreadyExists) {
+                    log.info("Assignment '{}' already exists. Skipping sync.", assignmentName);
+                    continue;
+                }
+
                 fetchedAssignmentNames.add(assignmentName);
                 String assignmentLink = classroom.get("url").getAsString() + "/assignments/" + assignment.get("slug").getAsString();
                 String invitationLink = assignment.get("invite_link").getAsString();
-                String slug = assignment.get("slug").getAsString();
                 JsonElement deadlineElement = assignment.get("deadline");
                 OffsetDateTime dueDate = null;
                 if (deadlineElement != null && !deadlineElement.isJsonNull()) {
@@ -184,13 +189,6 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     }
                 } catch (IOException | InterruptedException e) {
                     // Ignore README failures
-                }
-
-                boolean codeAssignmentAlreadyExists = assignmentRepository.existsByExternalId(assignmentId);
-
-                if (codeAssignmentAlreadyExists) {
-                    log.info("Assignment '{}' already exists. Skipping sync.", assignmentName);
-                    continue;
                 }
 
                 externalCodeAssignmentRepository.save(ExternalCodeAssignmentEntity.builder()

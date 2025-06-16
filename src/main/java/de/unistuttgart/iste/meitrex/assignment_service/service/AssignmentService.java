@@ -5,7 +5,6 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.Extern
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.SubexerciseEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCourseRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
@@ -126,11 +125,11 @@ public class AssignmentService {
             String assignmentName = contentServiceClient.queryContentsOfCourse(currentUser.getId(), courseId).stream()
                     .filter(content -> content.getId().equals(assessmentId))
                     .map(content -> content.getMetadata().getName())
-                    .findFirst().orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
+                    .findFirst().orElseThrow(() -> new EntityNotFoundException("Content with assessmentId %s not found".formatted(assessmentId)));
 
             // external assignment must be synced already before the next line happens
             ExternalCodeAssignmentEntity externalAssignment = externalCodeAssignmentRepository.findById(new ExternalCodeAssignmentEntity.PrimaryKey(courseTitle, assignmentName))
-                    .orElseThrow(() -> new EntityNotFoundException("Assignment with assessmentId %s not found".formatted(assessmentId)));
+                    .orElseThrow(() -> new EntityNotFoundException("External assignment with assessmentId %s not found".formatted(assessmentId)));
 
             assignmentEntity.setDate(externalAssignment.getDueDate());
 
