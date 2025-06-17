@@ -65,7 +65,7 @@ import java.util.zip.ZipInputStream;
 public class GithubClassroom implements CodeAssessmentProvider {
 
     final ExternalServiceProviderDto NAME = ExternalServiceProviderDto.GITHUB;
-    private final String BASE_PATH = "https://api.github.com";
+    private final String BASE_PATH;
     private final String VERSION = "2022-11-28";
     private final HttpClient client = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.ALWAYS)
@@ -77,11 +77,12 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
     public GithubClassroom(UserServiceClient userServiceClient, AssignmentRepository assignmentRepository,
                            ExternalCodeAssignmentRepository externalCodeAssignmentRepository,
-                           @Value("${github.organization_name}") String organizationName) {
+                           @Value("${github.organization_name}") String organizationName, @Value("${github.api_base_path:https://api.github.com}") String basePath) {
         this.userServiceClient = userServiceClient;
         this.assignmentRepository = assignmentRepository;
         this.externalCodeAssignmentRepository = externalCodeAssignmentRepository;
         this.organizationName = organizationName;
+        this.BASE_PATH = basePath;
     }
 
     @Override
@@ -222,6 +223,8 @@ public class GithubClassroom implements CodeAssessmentProvider {
                 return obj;
             }
         }
+        // we can only get to this method if getExternalCourse was called and returned the value of targetName
+        // if no classroom exists with the same title, we throw an exception
         throw new IllegalStateException("No element found with " + fieldName + " matching: " + targetName);
     }
 
@@ -508,7 +511,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
             JsonArray classrooms = JsonParser.parseString(classroomsResponse.body()).getAsJsonArray();
             JsonObject classroom = findByNameIgnoreCase(classrooms, "name", courseTitle);
 
-            return new ExternalCourse(classroom.get("id").getAsString(), classroom.get("url").getAsString());
+            return new ExternalCourse(classroom.get("name").getAsString(), classroom.get("url").getAsString());
 
         } catch (IOException | InterruptedException e) {
             throw new ExternalPlatformConnectionException("Error fetching external course: " + e.getMessage());

@@ -15,9 +15,14 @@ import de.unistuttgart.iste.meitrex.generated.dto.AssignmentType;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Component;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Component
 public class TestUtils {
@@ -159,5 +164,16 @@ public class TestUtils {
         grading2.setCodeAssignmentGradingMetadata(metadata2);
 
         return List.of(gradingRepository.save(grading1), gradingRepository.save(grading2));
+    }
+
+    public static byte[] createZipWithEntry(String entryName, String content) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            ZipEntry entry = new ZipEntry(entryName);
+            zos.putNextEntry(entry);
+            zos.write(content.getBytes(StandardCharsets.UTF_8));
+            zos.closeEntry();
+        }
+        return baos.toByteArray();
     }
 }
