@@ -93,6 +93,9 @@ public class QueryGetCodeGradingForAssignmentForAdminTest {
         when(courseServiceClient.queryMembershipsInCourse(any(UUID.class)))
                 .thenReturn(List.of());
 
+        when(codeAssessmentProvider.syncGradeForStudent("link", loggedInUser))
+                .thenReturn(externalGrading);
+
         UserInfo user = UserInfo.builder()
                 .setId(studentId)
                 .setUserName("user")
