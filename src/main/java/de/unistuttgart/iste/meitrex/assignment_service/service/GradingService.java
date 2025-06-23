@@ -5,7 +5,6 @@ import de.unistuttgart.iste.meitrex.assignment_service.config.ExternalSystemConf
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ManualMappingRequiredException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.CodeAssignmentMetadataEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.SubexerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.*;
@@ -39,8 +38,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;

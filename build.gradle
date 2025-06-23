@@ -73,8 +73,20 @@ graphqlCodegen {
     fieldsWithResolvers = ["@OnDemand"]
 }
 
-tasks.register('generateApiDocs', Exec) {
-    commandLine 'cmd', '/c', 'generate_api_doc.bat'
+// Automatically generate API documentation on project build:
+// Remark: Only works on Windows
+tasks.register('generateApiDocs') {
+    doLast {
+        try {
+            exec {
+                commandLine 'cmd', '/c', 'generate_api_doc.bat'
+            }
+        } catch (Exception e) {
+            // Catch errors when running api documentation generation.
+            // Errors during doc generation shouldn't cause the whole build to fail
+            println "Failed to generate API documentation: ${e.message}"
+        }
+    }
 }
 
 tasks.named('assemble') {
@@ -99,6 +111,9 @@ repositories {
 
 dependencies {
     implementation 'de.unistuttgart.iste.meitrex:meitrex-common:1.2.6'
+    implementation 'de.unistuttgart.iste.meitrex:content_service:1.2.0'
+    implementation 'de.unistuttgart.iste.meitrex:course_service:0.1.0'
+    implementation 'de.unistuttgart.iste.meitrex:user_service:0.1.0'
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-graphql'
