@@ -6,6 +6,8 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.gradin
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.service.AssignmentService;
 import de.unistuttgart.iste.meitrex.assignment_service.service.GradingService;
+import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedCourseServiceClientConfig;
+import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedUserServiceClientConfig;
 import de.unistuttgart.iste.meitrex.assignment_service.test_utils.TestUtils;
 import de.unistuttgart.iste.meitrex.common.testutil.GraphQlApiTest;
 import de.unistuttgart.iste.meitrex.common.testutil.InjectCurrentUserHeader;
@@ -13,9 +15,11 @@ import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.test.tester.GraphQlTester;
 import org.springframework.test.annotation.Commit;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -26,9 +30,15 @@ import java.util.UUID;
 import static de.unistuttgart.iste.meitrex.common.testutil.TestUsers.userWithMembershipInCourseWithId;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.when;
 
 
 @GraphQlApiTest
+@ContextConfiguration(classes = {
+        MockedCourseServiceClientConfig.class,
+        MockedUserServiceClientConfig.class
+
+})
 public class ImportGradingsForAssignmentTest {
 
     @Autowired
@@ -48,6 +58,7 @@ public class ImportGradingsForAssignmentTest {
     @Test
     @Transactional
     @Commit
+    @DisabledIfEnvironmentVariable(named = "CI", matches = "true")
     void testImportGradingsForAssignment(final GraphQlTester tester) {
         // tests for a sheet and grading made on local TMS setup
 

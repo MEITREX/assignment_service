@@ -6,6 +6,7 @@ import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.ExternalAssignment;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.springframework.graphql.test.tester.GraphQlTester;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import static de.unistuttgart.iste.meitrex.common.testutil.TestUsers.userWithMem
 import static org.hamcrest.MatcherAssert.assertThat;
 
 @GraphQlApiTest
+@DisabledIfEnvironmentVariable(named = "CI", matches = "true")
 public class QueryGetExternalAssignmentsTest {
 
 
