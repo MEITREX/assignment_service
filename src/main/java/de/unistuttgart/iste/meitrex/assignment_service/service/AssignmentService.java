@@ -576,16 +576,17 @@ public class AssignmentService {
     /**
      * Retrieves the external course details (title and URL) for a given internal course ID.
      * <p>
-     * If the external course is not already cached in the local database, it attempts to fetch it
-     * from the external code assessment provider (e.g., GitHub Classroom) and saves it.
+     * This method validates that the current user has ADMINISTRATOR access to the specified course,
+     * fetches the course title from the course service, and retrieves the corresponding external course
+     * details directly from the configured code assessment provider (e.g., GitHub Classroom).
      * </p>
      *
-     * @param courseId     the internal UUID of the MEITREX course.
-     * @param currentUser  the currently logged-in user, whose role will be validated.
+     * @param courseId    the internal UUID of the MEITREX course
+     * @param currentUser the currently logged-in user, whose role will be validated
      * @return the {@link ExternalCourse} if found and accessible, or {@code null} if:
      *         <ul>
      *             <li>the user does not have ADMINISTRATOR access to the course</li>
-     *             <li>an error occurs while contacting the external platform or user service</li>
+     *             <li>an error occurs while contacting the external provider or course service</li>
      *             <li>no such external course can be resolved</li>
      *         </ul>
      */
@@ -596,26 +597,12 @@ public class AssignmentService {
 
             String courseTitle = courseServiceClient.queryCourseById(courseId).getTitle();
 
-            ExternalCourseEntity entity = externalCourseRepository.findById(courseTitle)
-                    .orElseGet(() -> {
-                        try {
-                            ExternalCourse external = codeAssessmentProvider.getExternalCourse(courseTitle, currentUser);
-                            ExternalCourseEntity newEntity = new ExternalCourseEntity(courseTitle, external.getUrl());
-                            return externalCourseRepository.save(newEntity);
-                        } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
-                            return null;
-                        }
-                    });
-
-            if (entity == null) return null;
-
-            return new ExternalCourse(entity.getCourseTitle(), entity.getUrl());
+            ExternalCourse external = codeAssessmentProvider.getExternalCourse(courseTitle, currentUser);
+            return new ExternalCourse(courseTitle, external.getUrl());
 
         } catch (Exception e) {
-            log.error("Failed to get external course for course {}: {}", courseId, e.getMessage(), e);
+            log.warn("Could not fetch external course from provider: {}", e.getMessage());
             return null;
         }
     }
-
-
 }
