@@ -8,7 +8,7 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assign
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCourseRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.modelmapper.ModelMapper;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import static org.mockito.Mockito.*;
 public class AssignmentServiceTest {
 
     private final AssignmentRepository assignmentRepository = Mockito.mock(AssignmentRepository.class);
+    private final GradingRepository gradingRepository = Mockito.mock(GradingRepository.class);
     private final AssignmentMapper assignmentMapper = new AssignmentMapper(new ModelMapper());
     private final AssignmentValidator assignmentValidator = new AssignmentValidator();
     private final TopicPublisher topicPublisher = Mockito.mock(TopicPublisher.class);
@@ -51,9 +53,8 @@ public class AssignmentServiceTest {
     private final ContentServiceClient contentServiceClient = Mockito.mock(ContentServiceClient.class);
     private final CodeAssessmentProvider codeAssessmentProvider = Mockito.mock(CodeAssessmentProvider.class);
     private final ExternalCodeAssignmentRepository externalCodeAssignmentRepository = Mockito.mock(ExternalCodeAssignmentRepository.class);
-    private final ExternalCourseRepository externalCourseRepository = Mockito.mock(ExternalCourseRepository.class);
 
-    private final AssignmentService assignmentService = new AssignmentService(assignmentRepository, assignmentMapper, assignmentValidator, topicPublisher, courseServiceClient, contentServiceClient, codeAssessmentProvider, externalCodeAssignmentRepository, externalCourseRepository);
+    private final AssignmentService assignmentService = new AssignmentService(assignmentRepository, assignmentMapper, assignmentValidator, topicPublisher, courseServiceClient, contentServiceClient, codeAssessmentProvider, externalCodeAssignmentRepository, gradingRepository);
 
     private UUID courseId = UUID.randomUUID();
     private String courseTitle;
@@ -102,6 +103,34 @@ public class AssignmentServiceTest {
         verify(assignmentRepository, times(1)).deleteAllById(any());
     }
 
+    @Test
+    void deleteAssignmentIfContentIsDeletedAlsoDeletesGradingsTest() {
+        UUID assessmentId = UUID.randomUUID();
+        ContentChangeEvent contentChangeEvent = ContentChangeEvent.builder()
+                .contentIds(List.of(assessmentId))
+                .operation(CrudOperation.DELETE)
+                .build();
+
+        AssignmentEntity assignment = AssignmentEntity.builder()
+                .assessmentId(assessmentId)
+                .exercises(new ArrayList<>())
+                .build();
+
+        GradingEntity gradingEntity = GradingEntity.builder()
+                .primaryKey(new GradingEntity.PrimaryKey(UUID.randomUUID(), assessmentId))
+                .build();
+
+        when(assignmentRepository.findAllById(contentChangeEvent.getContentIds()))
+                .thenReturn(List.of(assignment));
+        when(gradingRepository.findAllByPrimaryKey_AssessmentIdIn(List.of(assessmentId)))
+                .thenReturn(List.of(gradingEntity));
+
+        assertDoesNotThrow(() -> assignmentService.deleteAssignmentIfContentIsDeleted(contentChangeEvent));
+
+        verify(gradingRepository, times(1)).findAllByPrimaryKey_AssessmentIdIn(List.of(assessmentId));
+        verify(gradingRepository, times(1)).deleteAll(List.of(gradingEntity));
+        verify(assignmentRepository, times(1)).deleteAllById(List.of(assessmentId));
+    }
 
     @Test
     void deleteAssignmentIfContentIsDeletedWithNoAssignmentsTest() {
@@ -230,26 +259,10 @@ public class AssignmentServiceTest {
         verify(externalCodeAssignmentRepository).findAssignmentNamesByCourseTitle(courseTitle);
     }
 
-
     @Test
-    void returnsCourseFromDatabaseIfPresent() {
-        when(externalCourseRepository.findById(courseTitle)).thenReturn(Optional.of(
-                new ExternalCourseEntity(courseTitle, "https://github.com/mycourse")));
-
-        ExternalCourse course = assignmentService.getExternalCourse(courseId, loggedInUser);
-
-        assertNotNull(course);
-        assertEquals(courseTitle, course.getCourseTitle());
-        assertEquals("https://github.com/mycourse", course.getUrl());
-    }
-
-    @Test
-    void fetchesAndSavesCourseIfMissing() throws Exception {
-        when(externalCourseRepository.findById(courseTitle)).thenReturn(Optional.empty());
-
+    void fetchesAndSavesCourse() throws Exception {
         ExternalCourse external = new ExternalCourse(courseTitle, "https://classroom.github.com/mycourse");
         when(codeAssessmentProvider.getExternalCourse(courseTitle, loggedInUser)).thenReturn(external);
-        when(externalCourseRepository.save(any())).thenReturn(new ExternalCourseEntity(courseTitle, external.getUrl()));
 
         ExternalCourse course = assignmentService.getExternalCourse(courseId, loggedInUser);
 
@@ -267,7 +280,6 @@ public class AssignmentServiceTest {
     @Test
     void returnsNullIfExternalProviderFails() throws Exception {
         String courseTitle = "Broken Course";
-        when(externalCourseRepository.findById(courseTitle)).thenReturn(Optional.empty());
         when(codeAssessmentProvider.getExternalCourse(courseTitle, loggedInUser))
                 .thenThrow(new ExternalPlatformConnectionException("Timeout"));
 

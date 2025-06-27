@@ -7,7 +7,6 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assign
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.SubexerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCourseRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
@@ -52,7 +51,6 @@ public class AssignmentService {
     private final ContentServiceClient contentServiceClient;
     private final CodeAssessmentProvider codeAssessmentProvider;
     private final ExternalCodeAssignmentRepository externalCodeAssignmentRepository;
-    private final ExternalCourseRepository externalCourseRepository;
     private final GradingRepository gradingRepository;
 
     /**

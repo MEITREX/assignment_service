@@ -3,7 +3,6 @@ package de.unistuttgart.iste.meitrex.assignment_service.api;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExternalCourseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCourseRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedCourseServiceClientConfig;
 import de.unistuttgart.iste.meitrex.common.testutil.GraphQlApiTest;
 import de.unistuttgart.iste.meitrex.common.testutil.InjectCurrentUserHeader;
@@ -39,9 +38,6 @@ public class QueryGetExternalCodeAssignmentsTest {
     private CourseServiceClient courseServiceClient;
 
     @Autowired
-    private ExternalCourseRepository externalCourseRepository;
-
-    @Autowired
     private ExternalCodeAssignmentRepository externalCodeAssignmentRepository;
 
 
@@ -61,13 +57,6 @@ public class QueryGetExternalCodeAssignmentsTest {
                 .build();
 
         when(courseServiceClient.queryCourseById(courseId)).thenReturn(mockCourse);
-
-        externalCourseRepository.save(
-                ExternalCourseEntity.builder()
-                        .courseTitle(courseTitle)
-                        .url("course_url")
-                        .build()
-        );
 
         externalCodeAssignmentRepository.saveAll(List.of(
                 ExternalCodeAssignmentEntity.builder()

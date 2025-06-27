@@ -1,9 +1,9 @@
 package de.unistuttgart.iste.meitrex.assignment_service.api;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExternalCourseEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCourseRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedCodeAssessmentProviderConfig;
 import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedCourseServiceClientConfig;
+import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
 import de.unistuttgart.iste.meitrex.common.testutil.GraphQlApiTest;
 import de.unistuttgart.iste.meitrex.common.testutil.InjectCurrentUserHeader;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
@@ -11,6 +11,7 @@ import de.unistuttgart.iste.meitrex.course_service.client.CourseServiceClient;
 import de.unistuttgart.iste.meitrex.course_service.exception.CourseServiceConnectionException;
 import de.unistuttgart.iste.meitrex.generated.dto.Course;
 import de.unistuttgart.iste.meitrex.generated.dto.ExternalCourse;
+import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.test.tester.GraphQlTester;
@@ -40,13 +41,14 @@ public class QueryGetExternalCourseTest {
     private CourseServiceClient courseServiceClient;
 
     @Autowired
-    private ExternalCourseRepository externalCourseRepository;
+    private CodeAssessmentProvider codeAssessmentProvider;
 
     @Test
-    void testGetExternalCourseReturnsFromDb(GraphQlTester tester) throws CourseServiceConnectionException {
+    void testGetExternalCourseFetchedFromProvider(GraphQlTester tester) throws CourseServiceConnectionException, ExternalPlatformConnectionException, UserServiceConnectionException {
         String courseTitle = "Test Course";
+        String externalUrl = "https://external.provider.url";
 
-        // mock course service response
+        // Mock course service
         Course mockCourse = Course.builder()
                 .setId(courseId)
                 .setTitle(courseTitle)
@@ -56,15 +58,11 @@ public class QueryGetExternalCourseTest {
                 .setPublished(true)
                 .setMemberships(List.of())
                 .build();
-
         when(courseServiceClient.queryCourseById(courseId)).thenReturn(mockCourse);
 
-        externalCourseRepository.save(
-                ExternalCourseEntity.builder()
-                        .courseTitle(courseTitle)
-                        .url("https://external.course.url")
-                        .build()
-        );
+        // Mock external provider
+        ExternalCourse externalCourse = new ExternalCourse(courseTitle, externalUrl);
+        when(codeAssessmentProvider.getExternalCourse(courseTitle, loggedInUser)).thenReturn(externalCourse);
 
         String query = """
                 query($courseId: UUID!) {
@@ -83,6 +81,6 @@ public class QueryGetExternalCourseTest {
                 .get();
 
         assertThat(result.getCourseTitle()).isEqualTo(courseTitle);
-        assertThat(result.getUrl()).isEqualTo("https://external.course.url");
+        assertThat(result.getUrl()).isEqualTo(externalUrl);
     }
 }
