@@ -107,8 +107,9 @@ public class GradingService {
         // we must update the total credits of the assignment based on an external grading which we get from
         // GH autograding workflow run which contains total_points
         // we do it since GH Api is buggy and doesn't provide the total points before the first grading
-        if (!externalGradings.isEmpty()){
-            final ExternalGrading tempGrading = externalGradings.get(0);
+        if (!externalGradings.isEmpty() &&
+                (assignment.getTotalCredits() == null || assignment.getTotalCredits() < externalGradings.getFirst().totalPoints())) {
+            final ExternalGrading tempGrading = externalGradings.getFirst();
             final String[] repoLink = new String[1];
             gradingRepository.findAllByPrimaryKey_AssessmentId(assignment.getId()).stream()
                     .filter(gradingEntity -> userIdToExternalId.get(gradingEntity.getPrimaryKey().getStudentId())
@@ -117,15 +118,18 @@ public class GradingService {
                     .ifPresent(gradingEntity -> {
                         repoLink[0] = gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink();
                     });
-            ExternalGrading externalGrading = null;
-            try {
-                externalGrading = codeAssessmentProvider.syncGradeForStudent(repoLink[0], currentUser);
-            } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
-                log.error("Failed to sync student grade for assignment {} and student {}: {}", assignment.getId(), currentUser.getId(), e.toString());
-            }
-            if (externalGrading != null) {
-                assignment.setTotalCredits(externalGrading.totalPoints());
-                assignmentRepository.save(assignment);
+
+            if (repoLink[0] != null) {
+                ExternalGrading externalGrading = null;
+                try {
+                    externalGrading = codeAssessmentProvider.syncGradeForStudent(repoLink[0], currentUser);
+                } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
+                    log.error("Failed to sync student grade for assignment {} and student {}: {}", assignment.getId(), currentUser.getId(), e.toString());
+                }
+                if (externalGrading != null) {
+                    assignment.setTotalCredits(externalGrading.totalPoints());
+                    assignmentRepository.save(assignment);
+                }
             }
         }
 

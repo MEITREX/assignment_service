@@ -5,8 +5,10 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.Extern
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.SubexerciseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCourseRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
@@ -29,6 +31,7 @@ import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +53,7 @@ public class AssignmentService {
     private final CodeAssessmentProvider codeAssessmentProvider;
     private final ExternalCodeAssignmentRepository externalCodeAssignmentRepository;
     private final ExternalCourseRepository externalCourseRepository;
+    private final GradingRepository gradingRepository;
 
     /**
      * Returns all assignments that are linked to the given assessment ids
@@ -533,6 +537,7 @@ public class AssignmentService {
      *
      * @param dto event object containing changes to content
      */
+    @Transactional
     public void deleteAssignmentIfContentIsDeleted(final ContentChangeEvent dto) throws IncompleteEventMessageException {
 
         // validate event message
@@ -543,6 +548,8 @@ public class AssignmentService {
             return;
         }
 
+        List<GradingEntity> gradings = gradingRepository.findAllByPrimaryKey_AssessmentIdIn(dto.getContentIds());
+        gradingRepository.deleteAll(gradings);
         assignmentRepository.deleteAllById(dto.getContentIds());
     }
 
