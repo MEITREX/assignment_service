@@ -11,10 +11,7 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.Gr
 import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
-import de.unistuttgart.iste.meitrex.common.event.ContentChangeEvent;
-import de.unistuttgart.iste.meitrex.common.event.ContentProgressedEvent;
-import de.unistuttgart.iste.meitrex.common.event.CrudOperation;
-import de.unistuttgart.iste.meitrex.common.event.Response;
+import de.unistuttgart.iste.meitrex.common.event.*;
 import de.unistuttgart.iste.meitrex.common.exception.IncompleteEventMessageException;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.content_service.client.ContentServiceClient;
@@ -116,6 +113,13 @@ public class AssignmentService {
             this.createCodeAssignment(courseId, assessmentId, mappedAssignmentEntity, currentUser);
         }
 
+        topicPublisher.notifyAssessmentContentMutated(new AssessmentContentMutatedEvent(
+                mappedAssignmentEntity.getCourseId(),
+                mappedAssignmentEntity.getAssessmentId(),
+                AssessmentType.ASSIGNMENT,
+                generateTaskInformation(mappedAssignmentEntity)
+        ));
+
         final AssignmentEntity savedAssignmentEntity = assignmentRepository.save(mappedAssignmentEntity);
         return assignmentMapper.assignmentEntityToDto(savedAssignmentEntity);
     }
@@ -205,6 +209,13 @@ public class AssignmentService {
         if (input.getRequiredPercentage() != null) {
             assignment.setRequiredPercentage(input.getRequiredPercentage());
         }
+
+        topicPublisher.notifyAssessmentContentMutated(new AssessmentContentMutatedEvent(
+                assignment.getCourseId(),
+                assignment.getAssessmentId(),
+                AssessmentType.ASSIGNMENT,
+                generateTaskInformation(assignment)
+        ));
 
         assignmentRepository.save(assignment);
         return assignmentMapper.assignmentEntityToDto(assignment);
@@ -304,6 +315,47 @@ public class AssignmentService {
                 .setCorrectness(correctness)
                 .setSuccess(success)
                 .build();
+    }
+
+    /**
+     * Helper method which generates task information for the given assignment.
+     * @param assignment The assignment for which to generate task information.
+     * @return Returns a list containing the task information.
+     */
+    private List<AssessmentContentMutatedEvent.TaskInformation> generateTaskInformation(final AssignmentEntity assignment) {
+        final List<AssessmentContentMutatedEvent.TaskInformation> results = new ArrayList<>();
+        final StringBuilder sb = new StringBuilder();
+
+        if (assignment.getAssignmentType().equals(AssignmentType.CODE_ASSIGNMENT)) {
+            sb.append("Task: Solve the code assignment.\n\n");
+            sb.append("Assignment Link: ");
+            sb.append(assignment.getCodeAssignmentMetadata().getAssignmentLink());
+            sb.append("\n");
+            sb.append("Invitation Link: ");
+            sb.append(assignment.getCodeAssignmentMetadata().getInvitationLink());
+            sb.append("\n");
+            sb.append("Readme: ");
+            sb.append(assignment.getCodeAssignmentMetadata().getReadmeHtml());
+            sb.append("\n");
+        } else {
+            sb.append("Task: Solve the assignment.\n\n");
+        }
+
+        sb.append("Total Credits: ");
+        sb.append(assignment.getTotalCredits());
+        sb.append("\n");
+        sb.append("Required Percentage: ");
+        sb.append(assignment.getRequiredPercentage() != null ? assignment.getRequiredPercentage() : 0.5);
+        sb.append("\n");
+        sb.append("Due Date: ");
+        sb.append(assignment.getDate() != null ? assignment.getDate().toString() : "No due date set");
+        sb.append("\n");
+        sb.append("Description: ");
+        sb.append(assignment.getDescription() != null ? assignment.getDescription() : "No description provided");
+        sb.append("\n");
+        results.add(new AssessmentContentMutatedEvent.TaskInformation(assignment.getAssessmentId(), sb.toString().trim()));
+
+        return results;
     }
 
     /**

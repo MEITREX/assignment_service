@@ -74,11 +74,18 @@ public class GradingService {
                         .orElseThrow(() -> new NoAccessToCourseException(assignment.getCourseId(), "User is not a member of the course."));
 
         if (assignment.getAssignmentType() == AssignmentType.CODE_ASSIGNMENT){
+            List<Grading> gradings;
             if (courseMembership.getRole() == LoggedInUser.UserRoleInCourse.STUDENT) {
-                return getCodeAssignmentGradingForStudent(assignment, currentUser);
+                gradings = getCodeAssignmentGradingForStudent(assignment, currentUser);
             } else {
-                return getCodeAssignmentGradingForAdmin(assignment, currentUser);
+                gradings = getCodeAssignmentGradingForAdmin(assignment, currentUser);
             }
+            // publish content progressed event for each grading
+            for (Grading grading: gradings){
+                final LogAssignmentCompletedInput input = LogAssignmentCompletedInput.builder().setAssessmentId(assignmentId).setAchievedCredits(grading.getAchievedCredits()).setCompletedExercises(List.of()).build();
+                assignmentService.publishProgress(input, grading.getStudentId());
+            }
+            return gradings;
         }
 
         return getNonCodeAssignmentGradings(assignment.getId(), courseMembership, currentUser);
