@@ -4,6 +4,10 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assign
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedContentServiceClientConfig;
 import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedCourseServiceClientConfig;
+import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedTopicPublisherConfig;
+import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
+import de.unistuttgart.iste.meitrex.common.event.AssessmentContentMutatedEvent;
+import de.unistuttgart.iste.meitrex.common.event.AssessmentType;
 import de.unistuttgart.iste.meitrex.common.testutil.GraphQlApiTest;
 import de.unistuttgart.iste.meitrex.common.testutil.InjectCurrentUserHeader;
 import de.unistuttgart.iste.meitrex.common.testutil.TestUsers;
@@ -14,30 +18,34 @@ import de.unistuttgart.iste.meitrex.course_service.client.CourseServiceClient;
 import de.unistuttgart.iste.meitrex.course_service.exception.CourseServiceConnectionException;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.test.tester.GraphQlTester;
 import org.springframework.test.context.ContextConfiguration;
 
 import java.time.OffsetDateTime;
 
-import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @GraphQlApiTest
 @ContextConfiguration(classes = {
         MockedCourseServiceClientConfig.class,
-        MockedContentServiceClientConfig.class
+        MockedContentServiceClientConfig.class,
+        MockedTopicPublisherConfig.class
 })
 public class MutationCreateCodeAssignmentTest {
 
     @InjectCurrentUserHeader
     private final LoggedInUser mockUser = TestUsers.userWithMembershipInCourseWithId(UUID.randomUUID(), LoggedInUser.UserRoleInCourse.ADMINISTRATOR);
+
+    @Autowired
+    private TopicPublisher topicPublisher;
 
     @Autowired
     private CourseServiceClient courseServiceClient;
@@ -146,6 +154,28 @@ public class MutationCreateCodeAssignmentTest {
 
         assertThat("ExternalCodeAssignmentEntity should have been deleted after creation",
                 externalAssignmentStillExists, is(false));
+
+        ArgumentCaptor<AssessmentContentMutatedEvent> eventCaptor = ArgumentCaptor.forClass(AssessmentContentMutatedEvent.class);
+        verify(topicPublisher).notifyAssessmentContentMutated(eventCaptor.capture());
+
+        AssessmentContentMutatedEvent publishedEvent = eventCaptor.getValue();
+
+        assertThat(publishedEvent.getCourseId(), is(courseId));
+        assertThat(publishedEvent.getAssessmentId(), is(assessmentId));
+        assertThat(publishedEvent.getAssessmentType(), is(AssessmentType.ASSIGNMENT));
+
+        List<AssessmentContentMutatedEvent.TaskInformation> taskInformationList = publishedEvent.getTaskInformationList();
+        assertThat(taskInformationList, hasSize(1));
+
+        String taskText = taskInformationList.getFirst().getTextualRepresentation();
+        assertThat(taskText, allOf(
+                containsString("Solve the code assignment"),
+                containsString("Assignment Link: https://github.com/org/classroom/assignment"),
+                containsString("Invitation Link: https://github.com/org/classroom/invite"),
+                containsString("Readme: <h1>Hello World</h1>"),
+                containsString("Required Percentage: 0.5"),
+                containsString("Description: Code assignment test")
+        ));
 
     }
 }

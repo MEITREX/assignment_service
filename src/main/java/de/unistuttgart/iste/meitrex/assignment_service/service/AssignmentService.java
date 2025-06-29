@@ -267,9 +267,11 @@ public class AssignmentService {
      * @throws EntityNotFoundException if the assignment does not exist
      */
     protected AssignmentCompletedFeedback publishProgress(final LogAssignmentCompletedInput input, final UUID userId) {
-        assignmentValidator.validateLogAssignmentCompletedInput(input);
-
         final AssignmentEntity assignmentEntity = requireAssignmentExists(input.getAssessmentId());
+        if (!assignmentEntity.getAssignmentType().equals(AssignmentType.CODE_ASSIGNMENT)){
+            assignmentValidator.validateLogAssignmentCompletedInput(input);
+        }
+
         final double requiredPercentage = assignmentEntity.getRequiredPercentage() == null ? 0.5 : assignmentEntity.getRequiredPercentage();
 
         final double achievedCredits = input.getAchievedCredits();
