@@ -3,7 +3,10 @@ package de.unistuttgart.iste.meitrex.assignment_service.api;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedCodeAssessmentProviderConfig;
 import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedCourseServiceClientConfig;
+import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedTopicPublisherConfig;
 import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedUserServiceClientConfig;
+import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
+import de.unistuttgart.iste.meitrex.common.event.ContentProgressedEvent;
 import de.unistuttgart.iste.meitrex.course_service.client.CourseServiceClient;
 import de.unistuttgart.iste.meitrex.course_service.exception.CourseServiceConnectionException;
 import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
@@ -25,6 +28,7 @@ import de.unistuttgart.iste.meitrex.user_service.client.UserServiceClient;
 import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.ExternalGrading;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.test.tester.GraphQlTester;
 import org.springframework.test.context.ContextConfiguration;
@@ -36,13 +40,12 @@ import java.util.UUID;
 import static de.unistuttgart.iste.meitrex.common.testutil.TestUsers.userWithMembershipInCourseWithId;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.when;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.*;
 
 
 @GraphQlApiTest
-@ContextConfiguration(classes = {MockedCodeAssessmentProviderConfig.class, MockedUserServiceClientConfig.class, MockedCourseServiceClientConfig.class})
+@ContextConfiguration(classes = {MockedCodeAssessmentProviderConfig.class, MockedUserServiceClientConfig.class, MockedCourseServiceClientConfig.class,  MockedTopicPublisherConfig.class})
 public class QueryGetCodeGradingForAssignmentForAdminTest {
 
     private final UUID courseId = UUID.randomUUID();
@@ -70,6 +73,9 @@ public class QueryGetCodeGradingForAssignmentForAdminTest {
 
     @Autowired
     private TestUtils testUtils;
+
+    @Autowired
+    private TopicPublisher topicPublisher;
 
     @Test
     @Transactional
@@ -132,5 +138,26 @@ public class QueryGetCodeGradingForAssignmentForAdminTest {
 
         AssignmentEntity updatedAssignment = assignmentRepository.findById(codeAssignmentEntity.getAssessmentId()).orElseThrow();
         assertThat(updatedAssignment.getTotalCredits(), is(externalGrading.totalPoints()));
+
+        ArgumentCaptor<ContentProgressedEvent> captor = ArgumentCaptor.forClass(ContentProgressedEvent.class);
+        verify(topicPublisher, atLeastOnce()).notifyUserWorkedOnContent(captor.capture());
+
+        List<ContentProgressedEvent> allEvents = captor.getAllValues();
+        ContentProgressedEvent event = allEvents.stream()
+                .filter(e -> e.getUserId().equals(studentId) &&
+                        e.getContentId().equals(codeAssignmentEntity.getId()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Expected ContentProgressedEvent not published"));
+
+        double expectedCorrectness = externalGrading.totalPoints() == 0 ?
+                1.0 : externalGrading.achievedPoints() / externalGrading.totalPoints();
+        boolean expectedSuccess = externalGrading.achievedPoints() >=
+                (updatedAssignment.getRequiredPercentage() == null ? 0.5 : updatedAssignment.getRequiredPercentage()) * updatedAssignment.getTotalCredits();
+
+        assertThat(event.getUserId(), is(studentId));
+        assertThat(event.getContentId(), is(codeAssignmentEntity.getAssessmentId()));
+        assertThat(event.getCorrectness(), is(expectedCorrectness));
+        assertThat(event.isSuccess(), is(expectedSuccess));
+        assertThat(event.getResponses().isEmpty(), is(true));
     }
 }

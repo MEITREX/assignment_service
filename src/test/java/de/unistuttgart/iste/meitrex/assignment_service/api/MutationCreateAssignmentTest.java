@@ -1,12 +1,19 @@
 package de.unistuttgart.iste.meitrex.assignment_service.api;
 
+import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedTopicPublisherConfig;
+import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
+import de.unistuttgart.iste.meitrex.common.event.AssessmentContentMutatedEvent;
+import de.unistuttgart.iste.meitrex.common.event.AssessmentType;
 import de.unistuttgart.iste.meitrex.common.testutil.GraphQlApiTest;
 import de.unistuttgart.iste.meitrex.common.testutil.InjectCurrentUserHeader;
 import de.unistuttgart.iste.meitrex.common.testutil.TestUsers;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.test.tester.GraphQlTester;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -15,8 +22,11 @@ import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 
 @GraphQlApiTest
+@ContextConfiguration(classes = {MockedTopicPublisherConfig.class})
 public class MutationCreateAssignmentTest {
 
     private final UUID courseId = UUID.randomUUID();
@@ -24,6 +34,8 @@ public class MutationCreateAssignmentTest {
     @InjectCurrentUserHeader
     private final LoggedInUser mockUser = TestUsers.userWithMembershipInCourseWithId(courseId, LoggedInUser.UserRoleInCourse.ADMINISTRATOR);
 
+    @Autowired
+    private TopicPublisher topicPublisher;
 
     @Test
     void testCreateAssignment(final GraphQlTester tester) {
@@ -159,6 +171,35 @@ public class MutationCreateAssignmentTest {
         assertThat(ex2subex1.getTotalSubexerciseCredits(), closeTo(75, 0));
         assertThat(ex2subex1.getNumber(), is("two a"));
 
+
+        ArgumentCaptor<AssessmentContentMutatedEvent> eventCaptor = ArgumentCaptor.forClass(AssessmentContentMutatedEvent.class);
+        verify(topicPublisher, atLeastOnce()).notifyAssessmentContentMutated(eventCaptor.capture());
+
+        List<AssessmentContentMutatedEvent> allEvents = eventCaptor.getAllValues();
+        AssessmentContentMutatedEvent publishedEvent = allEvents.stream()
+                .filter(e -> e.getAssessmentId().equals(assessmentId) &&
+                        e.getTaskInformationList().getFirst().getTextualRepresentation().contains("0.2"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Published event not found"));
+
+        assertThat(publishedEvent.getCourseId(), is(courseId));
+        assertThat(publishedEvent.getAssessmentId(), is(assessmentId));
+        assertThat(publishedEvent.getAssessmentType(), is(AssessmentType.ASSIGNMENT));
+        assertThat(publishedEvent.getTaskInformationList(), hasSize(1));
+
+        AssessmentContentMutatedEvent.TaskInformation task = publishedEvent.getTaskInformationList().getFirst();
+
+        String expectedTaskText = """
+            Task: Solve the assignment.
+
+            Total Credits: 100.0
+            Required Percentage: 0.2
+            Due Date: 2021-01-01T00:00Z
+            Description: exercise sheet 1
+            """.trim();
+
+        assertThat(task.getTaskId(), is(assessmentId));
+        assertThat(task.getTextualRepresentation(), is(expectedTaskText));
     }
 
 }
