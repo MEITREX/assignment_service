@@ -82,8 +82,10 @@ public class GradingService {
             }
             // publish content progressed event for each grading
             for (Grading grading: gradings){
-                final LogAssignmentCompletedInput input = LogAssignmentCompletedInput.builder().setAssessmentId(assignmentId).setAchievedCredits(grading.getAchievedCredits()).setCompletedExercises(List.of()).build();
-                assignmentService.publishProgress(input, grading.getStudentId());
+                if (grading.getAchievedCredits() != null && assignment.getTotalCredits() != null) {
+                    final LogAssignmentCompletedInput input = LogAssignmentCompletedInput.builder().setAssessmentId(assignmentId).setAchievedCredits(grading.getAchievedCredits()).setCompletedExercises(List.of()).build();
+                    assignmentService.publishProgress(input, grading.getStudentId());
+                }
             }
             return gradings;
         }
@@ -114,8 +116,7 @@ public class GradingService {
         // we must update the total credits of the assignment based on an external grading which we get from
         // GH autograding workflow run which contains total_points
         // we do it since GH Api is buggy and doesn't provide the total points before the first grading
-        if (!externalGradings.isEmpty() &&
-                (assignment.getTotalCredits() == null || assignment.getTotalCredits() < externalGradings.getFirst().totalPoints())) {
+        if (!externalGradings.isEmpty()) {
             final ExternalGrading tempGrading = externalGradings.getFirst();
             final String[] repoLink = new String[1];
             gradingRepository.findAllByPrimaryKey_AssessmentId(assignment.getId()).stream()
@@ -126,6 +127,7 @@ public class GradingService {
                         repoLink[0] = gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink();
                     });
 
+            // totalPoints of tempGrading from the list is always 0 because of buggy GH API, thats why the call here
             if (repoLink[0] != null) {
                 ExternalGrading externalGrading = null;
                 try {
@@ -185,7 +187,6 @@ public class GradingService {
 
         if (gradingEntity.getCodeAssignmentGradingMetadata() == null ||
                 gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink() == null) {
-
             try {
                 String assignmentName = contentServiceClient.queryContentsOfCourse(currentUser.getId(), assignment.getCourseId()).stream()
                         .filter(assignmentDto -> assignmentDto.getId().equals(assignment.getId()))
@@ -212,7 +213,9 @@ public class GradingService {
                 return List.of(assignmentMapper.gradingEntityToDto(gradingEntity));
             }
 
-            gradingEntity.setAchievedCredits(externalGrading.achievedPoints());
+            if (externalGrading.achievedPoints() != null){
+                gradingEntity.setAchievedCredits(externalGrading.achievedPoints());
+            }
             gradingEntity.setDate(externalGrading.date());
 
             CodeAssignmentGradingMetadataEntity metadata = gradingEntity.getCodeAssignmentGradingMetadata();
