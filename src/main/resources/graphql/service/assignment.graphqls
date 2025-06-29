@@ -14,8 +14,9 @@ type Assignment {
 
     """
     List of exercises making up the assignment.
+    Optional for CODE_ASSIGNMENT since GH Classroom does not provide exercises.
     """
-    exercises: [Exercise!]!
+    exercises: [Exercise!]
 
     """
     The date at which the assignment had to be handed in (optional).
@@ -25,7 +26,7 @@ type Assignment {
     """
     Number of total credits in the assignment.
     """
-    totalCredits: Float!
+    totalCredits: Float
 
     """
     Type of the assignment, e.g. exercise sheet or physical test.
@@ -36,6 +37,39 @@ type Assignment {
     Description of the assignment (optional).
     """
     description: String
+
+    """
+    The required percentage to pass the assignment. A value between 0 and 1. Defaults to 0.5. (optional)
+    """
+    requiredPercentage: Float
+
+    """
+    The id of the exercise sheet in an external system like TMS. (optional)
+    This is needed for mapping grading data to assignments.
+    """
+    externalId: String
+
+    """
+    CodeAssignmentMetadata contains metadata for the external code assignment.
+    """
+    codeAssignmentMetadata: CodeAssignmentMetadata
+}
+
+type CodeAssignmentMetadata {
+    """
+    Link to the GitHub Classroom or equivalent (optional, CODE_ASSIGNMENT only).
+    """
+    assignmentLink: String
+
+    """
+    Invitation link for students to join the assignment (optional, CODE_ASSIGNMENT only).
+    """
+    invitationLink: String
+
+    """
+    README content in HTML format for the assignment (optional, CODE_ASSIGNMENT only).
+    """
+    readmeHtml: String
 }
 
 
@@ -76,7 +110,7 @@ type Subexercise {
     """
     The amount of credits that can be earned on this sub-exercise.
     """
-    totalExerciseCredits: Float!
+    totalSubexerciseCredits: Float!
 
     """
     The number of the exercise on the exercise sheet, may be something such as 2b (optional).
@@ -91,10 +125,19 @@ type Subexercise {
 }
 
 """
+An external Assignment such as the ones from TMS. These are needed for mapping Meitrex Assignments to external ones for importing gradings.
+"""
+type ExternalAssignment {
+    externalId: String!
+    sheetNo: Float!
+}
+
+"""
 The type of assignment.
 """
 enum AssignmentType {
     EXERCISE_SHEET
     PHYSICAL_TEST
+    CODE_ASSIGNMENT
     # add more types here
 }

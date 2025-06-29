@@ -73,8 +73,20 @@ graphqlCodegen {
     fieldsWithResolvers = ["@OnDemand"]
 }
 
-tasks.register('generateApiDocs', Exec) {
-    commandLine 'cmd', '/c', 'generate_api_doc.bat'
+// Automatically generate API documentation on project build:
+// Remark: Only works on Windows
+tasks.register('generateApiDocs') {
+    doLast {
+        try {
+            exec {
+                commandLine 'cmd', '/c', 'generate_api_doc.bat'
+            }
+        } catch (Exception e) {
+            // Catch errors when running api documentation generation.
+            // Errors during doc generation shouldn't cause the whole build to fail
+            println "Failed to generate API documentation: ${e.message}"
+        }
+    }
 }
 
 tasks.named('assemble') {
@@ -98,22 +110,29 @@ repositories {
 }
 
 dependencies {
-    implementation 'de.unistuttgart.iste.meitrex:meitrex-common:1.0.2'
+    implementation 'de.unistuttgart.iste.meitrex:meitrex-common:1.2.6'
+    implementation 'de.unistuttgart.iste.meitrex:content_service:1.2.0'
+    implementation 'de.unistuttgart.iste.meitrex:course_service:0.1.0'
+    implementation 'de.unistuttgart.iste.meitrex:user_service:0.1.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-graphql'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-webflux'
     implementation 'org.modelmapper:modelmapper:3.+'
     implementation 'com.graphql-java:graphql-java-extended-scalars:22.0'
     implementation 'com.graphql-java:graphql-java-extended-validation:22.0'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'io.dapr:dapr-sdk:1.9.0' // Dapr's core SDK with all features, except Actors.
+    implementation 'io.dapr:dapr-sdk-springboot:1.9.0' // Dapr's SDK integration with SpringBoot
+    implementation 'org.json:json:20240303' // JSON parsing for import from TMS
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'de.unistuttgart.iste.meitrex:meitrex-common-test:1.0.2'
+    testImplementation 'de.unistuttgart.iste.meitrex:meitrex-common-test:1.2.6'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework:spring-webflux'
     testImplementation 'org.springframework.graphql:spring-graphql-test'
@@ -121,6 +140,7 @@ dependencies {
     testImplementation 'org.hamcrest:hamcrest:2.+'
     testImplementation "org.testcontainers:postgresql:1.+"
     testImplementation "org.testcontainers:junit-jupiter:1.+"
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
 }
 
 tasks.named('test') {

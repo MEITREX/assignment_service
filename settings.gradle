@@ -7,4 +7,13 @@ sourceControl {
     gitRepository(uri('https://github.com/MEITREX/common_test')) {
         producesModule('de.unistuttgart.iste.meitrex:meitrex-common-test')
     }
+    gitRepository(uri('https://github.com/MEITREX/content_service')){
+        producesModule('de.unistuttgart.iste.meitrex:content_service')
+    }
+    gitRepository(uri('https://github.com/MEITREX/user_service')){
+        producesModule('de.unistuttgart.iste.meitrex:user_service')
+    }
+    gitRepository(uri('https://github.com/MEITREX/course_service')){
+        producesModule('de.unistuttgart.iste.meitrex:course_service')
+    }
 }

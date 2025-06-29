@@ -1,0 +1,270 @@
+"""
+Mutations for the assignment service. Provides mutations for creating, updating, and deleting assignments.
+"""
+type Mutation {
+    """
+    Creates a new assignment. Mutation is only accessible internally within the system by other
+    services and the gateway.
+    ⚠️ This mutation is only accessible internally in the system and allows the caller to create assignments without
+    any permissions check and should not be called without any validation of the caller's permissions. ⚠️
+    """
+    _internal_noauth_createAssignment(courseId: UUID!, assessmentId: UUID!, input: CreateAssignmentInput!): Assignment!
+
+    """
+    Update top-level fields of an assignment.
+    🔒 The user must be an admin in the course the assignment belongs to.
+    """
+    updateAssignment(assessmentId: UUID!, input: UpdateAssignmentInput!): Assignment!
+
+    """
+    Modify an assignment.
+    🔒 The user must be an admin in the course the assignment is in to perform this action.
+    """
+    mutateAssignment(assessmentId: UUID!): AssignmentMutation!
+
+    """
+    Logs that a user's assignment score has been imported, i.e. the user has completed the assignment.
+    🔒 The user must be a tutor in the course the assignment is in to perform this action.
+    """ # TODO keep description up to date throughout development (especially the required roles)
+    logAssignmentCompleted(input: LogAssignmentCompletedInput!): AssignmentCompletedFeedback!
+
+    """
+    Saves mappings of meitrex users to external students.
+    Used to deal with ManualMappingInstances.
+    Returns list of all deleted ManualMappingInstance ids.
+    Returns null if connection to UserService failed.
+    🔒 The user must be an admin in the course to perform this action.
+    """
+    saveStudentMappings(courseId: UUID!, studentMappingInputs: [StudentMappingInput!]!): [String]!
+
+    """
+    Fetches assignment info from external code assessment provider for the given course
+    """
+    syncAssignmentsForCourse(courseId: UUID!): Boolean!
+}
+
+type AssignmentMutation {
+    """
+    ID of the assignment that is being modified.
+    """
+    assessmentId: UUID!
+
+    """
+    Creates a new exercise. Throws an error if the assignment does not exist.
+    """
+    createExercise(input: CreateExerciseInput!): Exercise!
+
+    """
+    Updates an exercise. Throws an error if the exercise does not exist.
+    """
+    updateExercise(input: UpdateExerciseInput!): Exercise!
+
+    """
+    Deletes the exercise with the specified ID. Throws an error if the exercise does not exist.
+    """
+    deleteExercise(itemId: UUID!): UUID!
+
+    """
+    Creates a new subexercise. Throws an error if the assignment does not exist.
+    """
+    createSubexercise(input: CreateSubexerciseInput!): Subexercise!
+
+    """
+    Updates a subexercise. Throws an error if the subexercise does not exist.
+    """
+    updateSubexercise(input: UpdateSubexerciseInput!): Subexercise!
+
+    """
+    Deletes the subexercise with the specified ID. Throws an error if the subexercise does not exist.
+    """
+    deleteSubexercise(itemId: UUID!): UUID!
+}
+
+input CreateAssignmentInput {
+    """
+    Number of total credits in the assignment. Optional for CODE_ASSIGNMENT.
+    Can be set later when grades are available.
+    """
+    totalCredits: Float @PositiveOrZero
+
+    """
+    List of exercises in this Assignment
+    Optional for CODE_ASSIGNMENT since GH Classroom does not provide exercises.
+    """
+    exercises: [CreateExerciseInput!]
+
+    """
+    Type of the assignment, e.g. exercise sheet or physical test.
+    """
+    assignmentType: AssignmentType!
+
+    """
+    The date at which the assignment had to be handed in (optional).
+    """
+    date: DateTime
+
+    """
+    Description of the assignment (optional).
+    """
+    description: String
+
+    """
+    The required percentage to pass the assignment. A value between 0 and 1. Defaults to 0.5. (optional)
+    """
+    requiredPercentage: Float @Range(min : 0, max : 1)
+
+    """
+    The id of the exercise sheet in an external system like TMS. (optional)
+    This is needed for mapping grading data to assignments.
+    """
+    externalId: String
+}
+
+input CreateExerciseInput {
+    """
+    the id of the item the exercise belongs to
+    """
+    itemId: UUID!
+
+    """
+    The amount of credits that can be earned on this exercise including all sub-exercises. (Positive or zero)
+    """
+    totalExerciseCredits: Float! @PositiveOrZero
+
+    """
+    Sub-exercises making up the exercise, i.e. parts a),b),c),...
+    """
+    subexercises: [CreateSubexerciseInput!]!
+
+    """
+    The number of the exercise on the exercise sheet, may be something such as 2 (optional).
+    """
+    number: String
+}
+
+input CreateSubexerciseInput {
+    """
+    the id of the item the subexercise belongs to
+    """
+    itemId: UUID!
+
+    """
+    the id of the exercise this subexercise belongs to
+    """
+    parentExerciseId: UUID!
+
+    """
+    The amount of credits that can be earned on this sub-exercise. (Positive or zero)
+    """
+    totalSubexerciseCredits: Float! @PositiveOrZero
+
+    """
+    The number of the exercise on the exercise sheet, may be something such as 2b (optional).
+    """
+    number: String
+}
+
+input UpdateExerciseInput {
+    """
+    Id of the exercise to update.
+    """
+    itemId: UUID!
+
+    """
+    The amount of credits that can be earned on this exercise including all sub-exercises. (Positive or zero)
+    """
+    totalExerciseCredits: Float! @PositiveOrZero
+
+    """
+    Sub-exercises making up the exercise, i.e. parts a),b),c),...
+    """
+    subexercises: [CreateSubexerciseInput!]!
+
+    """
+    The number of the exercise on the exercise sheet, may be something such as 2 (optional).
+    """
+    number: String
+
+}
+
+input UpdateSubexerciseInput {
+    """
+    Id of the subexercise to update.
+    """
+    itemId: UUID!
+
+    """
+    The amount of credits that can be earned on this sub-exercise. (Positive or zero)
+    """
+    totalSubexerciseCredits: Float! @PositiveOrZero
+
+    """
+    The number of the exercise on the exercise sheet, may be something such as 2b (optional).
+    """
+    number: String
+}
+
+"""
+Feedback data when "logAssignmentCompleted" is called.
+"""
+type AssignmentCompletedFeedback {
+    """
+    Whether the assignment was passed or not.
+    """
+    success: Boolean!
+
+    """
+    The percentage of achieved credits compared to total credits.
+    """
+    correctness: Float!
+}
+
+input LogAssignmentCompletedInput {
+    """
+    ID of the assignment.
+    """
+    assessmentId: UUID!
+
+    """
+    The absolute number of achieved credits.
+    """
+    achievedCredits: Float!
+
+    """
+    List of exercises that were completed in the assignment. Can be empty, if there are no exercises within the assignment.
+    """
+    completedExercises: [ExerciseCompletedInput]!
+}
+
+input ExerciseCompletedInput {
+    """
+    ID of the exercise.
+    """
+    itemId: UUID!
+
+    """
+    The absolute number of achieved credits.
+    """
+    achievedCredits: Float!
+
+    """
+    List of subexercises that were completed in the exercise. Can be empty, if there are no subexercises within the exercise.
+    """
+    completedSubexercises: [SubexerciseCompletedInput]!
+}
+
+input SubexerciseCompletedInput {
+    """
+    ID of the subexercise.
+    """
+    itemId: UUID!
+
+    """
+    The absolute number of achieved credits.
+    """
+    achievedCredits: Float!
+}
+
+input UpdateAssignmentInput {
+    requiredPercentage: Float @Range(min: 0, max: 1)
+}

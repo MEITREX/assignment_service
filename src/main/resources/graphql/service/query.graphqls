@@ -1,0 +1,56 @@
+type Query {
+    """
+    Get assignment by assessment ID.
+    If any of the assessment IDs are not found, the corresponding assignment will be null.
+    🔒 The user must be enrolled in the course the assignments belong to to access them. Otherwise null is returned for
+    an assignment if the user has no access to it.
+    """
+    findAssignmentsByAssessmentIds(assessmentIds: [UUID!]!): [Assignment]!
+
+    """
+    Get all gradings for one assignment
+    🔒 The user must be an admin in the course the assignment belongs to to access them. Otherwise null is returned for
+    an assignment if the user has no access to it.
+    """
+    getGradingsForAssignment(assessmentId: UUID!): [Grading!]!
+
+    """
+    Gets all the available external exercises.
+    CourseId is the id of the course the user is currently working in.
+    🔒 The user must be an admin in the course. Otherwise null is returned.
+    """
+    getExternalAssignments(courseId: UUID!): [ExternalAssignment!]!
+
+    """
+    Gets all the available external code exercises.
+    CourseId is the id of the course the user is currently working in.
+    🔒 The user must be an admin in the course. Otherwise null is returned.
+    """
+    getExternalCodeAssignments(courseId: UUID!): [String!]!
+
+    """
+    Get the corresponding external course for the given courseId.
+    CourseId is the id of the course the user is currently working in.
+    🔒 The user must be an admin in the course. Otherwise null is returned.
+    """
+    getExternalCourse(courseId: UUID!): ExternalCourse
+
+
+    """
+    Gets all manual student mappings, i.e. all students where the backend could not map to a meitrex user.
+    🔒 The user must be an admin in the course. Otherwise null is returned.
+    """
+    getManualMappingInstances(courseId: UUID!): [ManualMappingInstance]!
+}
+
+type ExternalCourse {
+    """
+    The name of the course.
+    """
+    courseTitle: String!
+
+    """
+    The url to the course.
+    """
+    url: String!
+}

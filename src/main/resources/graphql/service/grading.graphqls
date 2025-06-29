@@ -1,0 +1,158 @@
+"""
+A grading contains a user's achieved credits on an assignment and its exercises and subexercises.
+"""
+type Grading {
+    """
+    ID of the assignment.
+    """
+    assessmentId: UUID!
+
+    """
+    ID of the student the grading belongs to.
+    """
+    studentId: UUID!
+
+    """
+    The date and time of when the tutor corrected the assignment.
+    """
+    date: DateTime
+
+    """
+    The absolute number of achieved credits on the assignment.
+    """
+    achievedCredits: Float
+
+    """
+    CodeAssignmentGradingMetadata contains metadata for the external code assignment grading.
+    """
+    codeAssignmentGradingMetadata: CodeAssignmentGradingMetadata
+
+    """
+    List of exercise-gradings for each exercise in the assignment. Can be empty, if there are no exercises within the assignment.
+    """
+    exerciseGradings: [ExerciseGrading!]
+}
+
+type CodeAssignmentGradingMetadata {
+    """
+    The repository link of for the external code assignment.
+    """
+    repoLink: String
+
+    """
+    The pipeline status of the corresponding repository.
+    """
+    status: String
+
+    """
+    The Github worfklow run log table HTML of the corresponding repository.
+    """
+    feedbackTableHtml: String
+}
+
+type ExerciseGrading {
+    """
+    ID of the exercise.
+    """
+    itemId: UUID!
+
+    """
+    ID of the student the exercise-grading belongs to.
+    """
+    studentId: UUID!
+
+    """
+    The absolute number of achieved credits on the exercise.
+    """
+    achievedCredits: Float!
+
+    """
+    List of subexercise-gradings for each subexercise in the exercise. Can be empty, if there are no subexercises within the exercise.
+    """
+    subexerciseGradings: [SubexerciseGrading]!
+}
+
+type SubexerciseGrading {
+    """
+    ID of the subexercise.
+    """
+    itemId: UUID!
+
+    """
+    ID of the student the subexercise-grading belongs to.
+    """
+    studentId: UUID!
+
+    """
+    The absolute number of achieved credits on the subexercise.
+    """
+    achievedCredits: Float!
+}
+
+type StudentMapping {
+    """
+    Student Id in Meitrex
+    """
+    meitrexStudentId: UUID!
+
+    """
+    Student Id in external system like TMS
+    """
+    externalStudentId: String!
+}
+
+input StudentMappingInput {
+    """
+    Student Id in Meitrex
+    """
+    meitrexStudentId: UUID!
+
+    """
+    Student Id in external system like TMS
+    """
+    externalStudentId: String!
+}
+
+"""
+An object to represent a student where the backend could not automatically map the external student to a meitrex user.
+"""
+type ManualMappingInstance {
+    """
+    Student Id in external system like TMS
+    """
+    externalStudentId: String!
+
+    """
+    JSON Object containing all available information on the external student.
+    """
+    externalStudentInfo: String!
+}
+
+
+"""
+An Unfinished Grading is created, when importing and parsing gradings from external systems like TMS goes wrong
+because the student id has to be mapped manually.
+After an admin mapped ids manually, these unfinished gradings will be tried again.
+"""
+type UnfinishedGrading {
+    """
+    Student Id in external system like TMS
+    """
+    externalStudentId: String!
+
+    """
+    Assignment/HandIn id in MEITREX
+    """
+    assignmentId: UUID!
+
+    """
+    JSON representation of the grading
+    """
+    gradingJson: String!
+
+    """
+    The number of times importing and parsing was tried. Might be useful for detecting and manually deleting broken gradings.
+    """
+    numberOfTries: Int!
+}
+
