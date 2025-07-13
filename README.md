@@ -11,11 +11,14 @@ It handles assignment creation, grading, and publishing grading results. Externa
 ### Relevant for deployment
 | Name                       | Description                        | Value in Dev Environment                            | Value in Prod Environment                                                  |
 |----------------------------|------------------------------------|-----------------------------------------------------|----------------------------------------------------------------------------|
-| spring.datasource.url               | PostgreSQL database URL            | jdbc:postgresql://localhost:1132/assignment_service | jdbc:postgresql://assignment-service-db-postgresql:5432/assignment-service |
-| spring.datasource.username          | Database usernam                   | root                                                | gits                                                                       |
-| spring.datasource.password          | Database password                  | root                                                | *secret*                                                                   |
-| DAPR_HTTP_PORT                        | Dapr HTTP Port*                        | 1100                                                | 3500                                                                       |
-| server.port                           | Port on which the application runs     | 1101                                                | 1101                                                                       |
+| spring.datasource.url      | PostgreSQL database URL            | jdbc:postgresql://localhost:1132/assignment_service | jdbc:postgresql://assignment-service-db-postgresql:5432/assignment-service |
+| spring.datasource.username | Database usernam                   | root                                                | gits                                                                       |
+| spring.datasource.password | Database password                  | root                                                | *secret*                                                                   |
+| DAPR_HTTP_PORT             | Dapr HTTP Port*                    | 1100                                                | 3500                                                                       |
+| server.port                | Port on which the application runs | 1101                                                | 1101                                                                       |
+| course_service.url         | URL for course service GraphQL     | http://localhost:2001/graphql                       | http://localhost:3500/v1.0/invoke/course-service/method/graphql            |
+| content_service.url        | URL for content service GraphQL    | http://localhost:4001/graphql                       | http://localhost:3500/v1.0/invoke/content-service/method/graphql           |
+| user_service.url           | URL for user service GraphQL       | http://localhost:5001/graphql                       | http://localhost:3500/v1.0/invoke/user-service/method/graphql              |
 ### Other properties
 
 | Name                                    | Description                               | Value in Dev Environment                | Value in Prod Environment               |
