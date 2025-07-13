@@ -190,7 +190,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
                         // Clean GitHub README HTML by removing visual noise (e.g., anchor icons)
                         readmeHtml = rawReadmeHtml
                                 // Remove full <a class="anchor">...</a> blocks including embedded SVG link icons
-                                .replaceAll("<a[^>]*class=\"anchor\"[^>]*>\\s*<svg[^>]*>.*?</svg>\\s*</a>", "")
+                                .replaceAll("<a[^>]*class=\"anchor\"[^>]*>\\s*<svg[^>]*>[^<]*</svg>\\s*</a>", "")
                                 // Remove empty lines left behind after tag removal
                                 .replaceAll("(?m)^\\s+$", "");
                     }
@@ -354,26 +354,28 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
                 ZipEntry entry;
                 while ((entry = zis.getNextEntry()) != null) {
-                    if (entry.getName().contains("run-autograding-tests.txt")) {
-                        StringBuilder logBuilder = new StringBuilder();
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(zis));
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            logBuilder.append(line).append("\n");
-                        }
-                        String logs = logBuilder.toString();
+                    if (!entry.getName().equals("run-autograding-tests.txt")) {
+                        continue;
+                    }
 
-                        // Now apply your regex on `logs`
-                        Pattern pattern = Pattern.compile("\\{\"totalPoints\":(\\d+(?:\\.\\d+)?),\"maxPoints\":(\\d+(?:\\.\\d+)?)\\}");
-                        Matcher matcher = pattern.matcher(logs);
-                        if (matcher.find()) {
-                            double totalPoints = Double.parseDouble(matcher.group(1));
-                            double maxPoints = Double.parseDouble(matcher.group(2));
-                            String tableHtml = extractGradingTableAsHtml(logs);
-                            return new ExternalGrading(null, status, OffsetDateTime.parse(lastlyTested), tableHtml, totalPoints, maxPoints);
-                        } else {
-                            throw new ExternalPlatformConnectionException("Could not find totalPoints/maxPoints in logs.");
-                        }
+                    StringBuilder logBuilder = new StringBuilder();
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(zis));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        logBuilder.append(line).append("\n");
+                    }
+                    String logs = logBuilder.toString();
+
+                    // Now apply your regex on `logs`
+                    Pattern pattern = Pattern.compile("\\{\"totalPoints\":(\\d+(?:\\.\\d+)?),\"maxPoints\":(\\d+(?:\\.\\d+)?)\\}");
+                    Matcher matcher = pattern.matcher(logs);
+                    if (matcher.find()) {
+                        double totalPoints = Double.parseDouble(matcher.group(1));
+                        double maxPoints = Double.parseDouble(matcher.group(2));
+                        String tableHtml = extractGradingTableAsHtml(logs);
+                        return new ExternalGrading(null, status, OffsetDateTime.parse(lastlyTested), tableHtml, totalPoints, maxPoints);
+                    } else {
+                        throw new ExternalPlatformConnectionException("Could not find totalPoints/maxPoints in logs.");
                     }
                 }
 
