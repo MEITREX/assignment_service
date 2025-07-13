@@ -19,6 +19,7 @@ It handles assignment creation, grading, and publishing grading results. Externa
 | course_service.url         | URL for course service GraphQL     | http://localhost:2001/graphql                       | http://localhost:3500/v1.0/invoke/course-service/method/graphql            |
 | content_service.url        | URL for content service GraphQL    | http://localhost:4001/graphql                       | http://localhost:3500/v1.0/invoke/content-service/method/graphql           |
 | user_service.url           | URL for user service GraphQL       | http://localhost:5001/graphql                       | http://localhost:3500/v1.0/invoke/user-service/method/graphql              |
+| github.organization_name | GitHub org for managing and grading code assignments | MEITREX-TEST | MEITREX-ASSIGNMENTS |
 ### Other properties
 
 | Name                                    | Description                               | Value in Dev Environment                | Value in Prod Environment               |
