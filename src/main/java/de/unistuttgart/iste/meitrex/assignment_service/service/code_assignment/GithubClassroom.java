@@ -64,9 +64,15 @@ import java.util.zip.ZipInputStream;
 @Primary
 public class GithubClassroom implements CodeAssessmentProvider {
 
-    final ExternalServiceProviderDto NAME = ExternalServiceProviderDto.GITHUB;
-    private final String BASE_PATH;
-    private final String VERSION = "2022-11-28";
+    private final static ExternalServiceProviderDto NAME = ExternalServiceProviderDto.GITHUB;
+    private static final String HEADER_ACCEPT = "Accept";
+    private static final String HEADER_AUTHORIZATION = "Authorization";
+    private static final String HEADER_API_VERSION = "X-GitHub-Api-Version";
+    private static final String API_VERSION = "2022-11-28";
+    private static final String TOKEN_PREFIX = "Bearer ";
+    private static final String ACCEPT_HEADER_JSON = "application/vnd.github+json";
+    private static final String ACCEPT_HEADER_HTML = "application/vnd.github.html+json";
+    private final String basePath;
     private final HttpClient client = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.ALWAYS)
             .build();
@@ -77,12 +83,12 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
     public GithubClassroom(UserServiceClient userServiceClient, AssignmentRepository assignmentRepository,
                            ExternalCodeAssignmentRepository externalCodeAssignmentRepository,
-                           @Value("${github.organization_name}") String organizationName, @Value("${github.api_base_path:https://api.github.com}") String basePath) {
+                           @Value("${github.organization_name}") String organizationName, @Value("${github.api_basePath:https://api.github.com}") String basePath) {
         this.userServiceClient = userServiceClient;
         this.assignmentRepository = assignmentRepository;
         this.externalCodeAssignmentRepository = externalCodeAssignmentRepository;
         this.organizationName = organizationName;
-        this.BASE_PATH = basePath;
+        this.basePath = basePath;
     }
 
     @Override
@@ -92,10 +98,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
             String token = queryTokenResponse.getAccessToken();
 
             HttpRequest classroomsRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_PATH + "/classrooms"))
-                    .header("Accept", "application/vnd.github+json")
-                    .header("Authorization", "Bearer " + token)
-                    .header("X-GitHub-Api-Version", VERSION)
+                    .uri(URI.create(basePath + "/classrooms"))
+                    .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                    .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                    .header(HEADER_API_VERSION, API_VERSION)
                     .GET()
                     .build();
 
@@ -109,10 +115,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
             int classroomId = classroom.get("id").getAsInt();
 
             HttpRequest assignmentsRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_PATH + "/classrooms/" + classroomId + "/assignments"))
-                    .header("Accept", "application/vnd.github+json")
-                    .header("Authorization", "Bearer " + token)
-                    .header("X-GitHub-Api-Version", VERSION)
+                    .uri(URI.create(basePath + "/classrooms/" + classroomId + "/assignments"))
+                    .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                    .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                    .header(HEADER_API_VERSION, API_VERSION)
                     .GET()
                     .build();
 
@@ -150,10 +156,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
                 String readmeHtml = "";
                 try {
                     HttpRequest assignmentDetailsRequest = HttpRequest.newBuilder()
-                            .uri(URI.create(BASE_PATH + "/assignments/" + assignmentId))
-                            .header("Accept", "application/vnd.github+json")
-                            .header("Authorization", "Bearer " + token)
-                            .header("X-GitHub-Api-Version", VERSION)
+                            .uri(URI.create(basePath + "/assignments/" + assignmentId))
+                            .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                            .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                            .header(HEADER_API_VERSION, API_VERSION)
                             .GET()
                             .build();
 
@@ -171,10 +177,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     }
 
                     HttpRequest readmeRequest = HttpRequest.newBuilder()
-                            .uri(URI.create(BASE_PATH + "/repos/" + fullName + "/readme"))
-                            .header("Accept", "application/vnd.github.html+json")
-                            .header("Authorization", "Bearer " + token)
-                            .header("X-GitHub-Api-Version", VERSION)
+                            .uri(URI.create(basePath + "/repos/" + fullName + "/readme"))
+                            .header(HEADER_ACCEPT, ACCEPT_HEADER_HTML)
+                            .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                            .header(HEADER_API_VERSION, API_VERSION)
                             .GET()
                             .build();
 
@@ -236,10 +242,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
             String token = queryTokenResponse.getAccessToken();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_PATH + "/assignments/" + externalAssignmentId + "/grades"))
-                    .header("Accept", "application/vnd.github+json")
-                    .header("Authorization", "Bearer " + token)
-                    .header("X-GitHub-Api-Version", VERSION)
+                    .uri(URI.create(basePath + "/assignments/" + externalAssignmentId + "/grades"))
+                    .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                    .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                    .header(HEADER_API_VERSION, API_VERSION)
                     .GET()
                     .build();
 
@@ -300,10 +306,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
             // Get latest completed workflow runs
             HttpRequest runRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_PATH + "/repos/" + owner + "/" + repo + "/actions/runs?per_page=1"))
-                    .header("Authorization", "Bearer " + token)
-                    .header("Accept", "application/vnd.github+json")
-                    .header("X-GitHub-Api-Version", VERSION)
+                    .uri(URI.create(basePath + "/repos/" + owner + "/" + repo + "/actions/runs?per_page=1"))
+                    .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                    .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                    .header(HEADER_API_VERSION, API_VERSION)
                     .GET()
                     .build();
 
@@ -331,9 +337,9 @@ public class GithubClassroom implements CodeAssessmentProvider {
             // Download logs
             HttpRequest logRequest = HttpRequest.newBuilder()
                     .uri(URI.create(logsUrl))
-                    .header("Authorization", "Bearer " + token)
-                    .header("Accept", "application/vnd.github+json")
-                    .header("X-GitHub-Api-Version", VERSION)
+                    .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                    .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                    .header(HEADER_API_VERSION, API_VERSION)
                     .GET()
                     .build();
 
@@ -464,10 +470,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
             String repoName = slug + "-" + githubUsername;
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_PATH + "/repos/" + organizationName + "/" + repoName))
-                    .header("Accept", "application/vnd.github+json")
-                    .header("Authorization", "Bearer " + token)
-                    .header("X-GitHub-Api-Version", "2022-11-28")
+                    .uri(URI.create(basePath + "/repos/" + organizationName + "/" + repoName))
+                    .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                    .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                    .header(HEADER_API_VERSION, API_VERSION)
                     .GET()
                     .build();
 
@@ -496,10 +502,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
             String token = queryTokenResponse.getAccessToken();
 
             HttpRequest classroomsRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(BASE_PATH + "/classrooms"))
-                    .header("Accept", "application/vnd.github+json")
-                    .header("Authorization", "Bearer " + token)
-                    .header("X-GitHub-Api-Version", VERSION)
+                    .uri(URI.create(basePath + "/classrooms"))
+                    .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                    .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                    .header(HEADER_API_VERSION, API_VERSION)
                     .GET()
                     .build();
 

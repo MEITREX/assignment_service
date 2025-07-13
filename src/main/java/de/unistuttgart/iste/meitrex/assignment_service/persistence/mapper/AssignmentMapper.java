@@ -28,8 +28,6 @@ public class AssignmentMapper {
             return null;
         }
 
-//        MatchingStrategy originalStrategy = modelMapper.getConfiguration().getMatchingStrategy();
-//        modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
         Assignment mappedAssignment = modelMapper.map(assignmentEntity, Assignment.class);
 
         if (assignmentEntity.getAssignmentType() != AssignmentType.CODE_ASSIGNMENT) {
@@ -47,7 +45,6 @@ public class AssignmentMapper {
             metadata.setReadmeHtml(metadataEntity.getReadmeHtml());
         }
 
-//        modelMapper.getConfiguration().setMatchingStrategy(originalStrategy);
         return mappedAssignment;
     }
 

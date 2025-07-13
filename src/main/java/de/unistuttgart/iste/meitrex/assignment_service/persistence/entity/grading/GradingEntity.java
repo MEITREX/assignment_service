@@ -1,13 +1,11 @@
 package de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.CodeAssignmentMetadataEntity;
 import de.unistuttgart.iste.meitrex.common.persistence.IWithId;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.tomcat.util.codec.binary.StringUtils;
 
 import java.io.Serializable;
 import java.time.OffsetDateTime;
