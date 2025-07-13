@@ -27,7 +27,7 @@ import static org.mockito.Mockito.verify;
 
 @GraphQlApiTest
 @ContextConfiguration(classes = {MockedTopicPublisherConfig.class})
-public class MutationCreateAssignmentTest {
+class MutationCreateAssignmentTest {
 
     private final UUID courseId = UUID.randomUUID();
 

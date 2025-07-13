@@ -25,7 +25,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 @GraphQlApiTest
-public class MutationUpdateExerciseTest {
+class MutationUpdateExerciseTest {
 
     @Autowired
     private AssignmentRepository assignmentRepository;

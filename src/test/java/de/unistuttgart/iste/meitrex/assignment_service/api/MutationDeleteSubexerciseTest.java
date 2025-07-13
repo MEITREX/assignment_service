@@ -23,7 +23,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 
 @GraphQlApiTest
-public class MutationDeleteSubexerciseTest {
+class MutationDeleteSubexerciseTest {
 
     @Autowired
     private AssignmentRepository assignmentRepository;

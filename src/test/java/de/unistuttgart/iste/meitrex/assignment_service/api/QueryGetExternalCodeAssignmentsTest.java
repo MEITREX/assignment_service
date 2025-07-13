@@ -1,6 +1,5 @@
 package de.unistuttgart.iste.meitrex.assignment_service.api;
 
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExternalCourseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.test_config.MockedCourseServiceClientConfig;
@@ -27,7 +26,7 @@ import static org.mockito.Mockito.when;
 
 @ContextConfiguration(classes = MockedCourseServiceClientConfig.class)
 @GraphQlApiTest
-public class QueryGetExternalCodeAssignmentsTest {
+class QueryGetExternalCodeAssignmentsTest {
 
     private final UUID courseId = UUID.randomUUID();
 

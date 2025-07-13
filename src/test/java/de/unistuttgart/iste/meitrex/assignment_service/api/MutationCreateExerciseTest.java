@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 @GraphQlApiTest
-public class MutationCreateExerciseTest {
+class MutationCreateExerciseTest {
 
     @Autowired
     private AssignmentRepository assignmentRepository;

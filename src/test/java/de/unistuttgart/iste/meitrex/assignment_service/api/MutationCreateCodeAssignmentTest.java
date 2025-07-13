@@ -39,7 +39,7 @@ import static org.mockito.Mockito.when;
         MockedContentServiceClientConfig.class,
         MockedTopicPublisherConfig.class
 })
-public class MutationCreateCodeAssignmentTest {
+class MutationCreateCodeAssignmentTest {
 
     @InjectCurrentUserHeader
     private final LoggedInUser mockUser = TestUsers.userWithMembershipInCourseWithId(UUID.randomUUID(), LoggedInUser.UserRoleInCourse.ADMINISTRATOR);

@@ -34,7 +34,7 @@ import static org.mockito.Mockito.verify;
 
 @GraphQlApiTest
 @ContextConfiguration(classes = MockTestPublisherConfiguration.class)
-public class MutationLogAssignmentCompletedTest {
+class MutationLogAssignmentCompletedTest {
 
     @Autowired
     private AssignmentRepository assignmentRepository;

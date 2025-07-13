@@ -24,7 +24,7 @@ import static org.hamcrest.Matchers.*;
 import static org.hamcrest.Matchers.is;
 
 @GraphQlApiTest
-public class MutationCreateSubexerciseTest {
+class MutationCreateSubexerciseTest {
 
     @Autowired
     private AssignmentRepository assignmentRepository;

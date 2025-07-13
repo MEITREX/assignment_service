@@ -46,7 +46,7 @@ import static org.mockito.Mockito.*;
         MockedContentServiceClientConfig.class,
         MockedTopicPublisherConfig.class
 })
-public class QueryGetCodeGradingForAssignmentForStudentTest {
+class QueryGetCodeGradingForAssignmentForStudentTest {
 
     private final UUID courseId = UUID.randomUUID();
 

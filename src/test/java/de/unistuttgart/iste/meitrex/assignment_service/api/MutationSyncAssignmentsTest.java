@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 
 @GraphQlApiTest
 @ContextConfiguration(classes = {MockedCodeAssessmentProviderConfig.class, MockedCourseServiceClientConfig.class})
-public class MutationSyncAssignmentsTest {
+class MutationSyncAssignmentsTest {
 
     private final UUID courseId = UUID.randomUUID();
 
