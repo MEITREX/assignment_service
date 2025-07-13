@@ -17,7 +17,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 @GraphQlApiTest
 @DisabledIfEnvironmentVariable(named = "CI", matches = "true")
-public class QueryGetExternalAssignmentsTest {
+class QueryGetExternalAssignmentsTest {
 
 
     private final UUID courseId = UUID.randomUUID();

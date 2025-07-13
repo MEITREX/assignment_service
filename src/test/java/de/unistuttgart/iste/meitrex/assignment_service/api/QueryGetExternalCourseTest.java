@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
         MockedCourseServiceClientConfig.class,
         MockedCodeAssessmentProviderConfig.class
 })
-public class QueryGetExternalCourseTest {
+class QueryGetExternalCourseTest {
 
     private final UUID courseId = UUID.randomUUID();
 

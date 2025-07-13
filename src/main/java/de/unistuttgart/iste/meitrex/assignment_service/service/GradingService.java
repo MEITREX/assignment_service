@@ -70,7 +70,7 @@ public class GradingService {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId);
 
         LoggedInUser.CourseMembership courseMembership = currentUser.getCourseMemberships().stream()
-                        .filter((membership) -> membership.getCourseId().equals(assignment.getCourseId())).findFirst()
+                        .filter(membership -> membership.getCourseId().equals(assignment.getCourseId())).findFirst()
                         .orElseThrow(() -> new NoAccessToCourseException(assignment.getCourseId(), "User is not a member of the course."));
 
         if (assignment.getAssignmentType() == AssignmentType.CODE_ASSIGNMENT){
@@ -110,7 +110,7 @@ public class GradingService {
             log.error("Failed to sync student grades for assignment {}: {}", assignment.getId(), e.toString());
             return gradings.stream()
                     .map(assignmentMapper::gradingEntityToDto)
-                    .collect(Collectors.toList());
+                    .toList();
         }
 
         // we must update the total credits of the assignment based on an external grading which we get from
@@ -123,9 +123,9 @@ public class GradingService {
                     .filter(gradingEntity -> userIdToExternalId.get(gradingEntity.getPrimaryKey().getStudentId())
                             .equals(tempGrading.externalUsername()))
                     .findFirst()
-                    .ifPresent(gradingEntity -> {
-                        repoLink[0] = gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink();
-                    });
+                    .ifPresent(gradingEntity ->
+                        repoLink[0] = gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink()
+                    );
 
             // totalPoints of tempGrading from the list is always 0 because of buggy GH API, thats why the call here
             if (repoLink[0] != null) {
@@ -244,7 +244,7 @@ public class GradingService {
         try {
             validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.STUDENT, assignment.getCourseId());
         } catch (final NoAccessToCourseException ex) {
-            return null;
+            return Collections.emptyList();
         }
 
         if (courseMembership.getRole() == LoggedInUser.UserRoleInCourse.STUDENT) {

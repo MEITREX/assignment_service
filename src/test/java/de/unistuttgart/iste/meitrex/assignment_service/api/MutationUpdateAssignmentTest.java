@@ -14,7 +14,6 @@ import de.unistuttgart.iste.meitrex.generated.dto.Assignment;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.graphql.test.tester.GraphQlTester;
 import org.springframework.test.annotation.Commit;
@@ -31,7 +30,7 @@ import static org.mockito.Mockito.verify;
 
 @GraphQlApiTest
 @ContextConfiguration(classes = {MockedTopicPublisherConfig.class})
-public class MutationUpdateAssignmentTest {
+class MutationUpdateAssignmentTest {
 
     @Autowired
     private AssignmentRepository assignmentRepository;

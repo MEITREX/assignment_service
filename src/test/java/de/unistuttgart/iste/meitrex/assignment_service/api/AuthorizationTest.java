@@ -16,7 +16,7 @@ import java.util.UUID;
 import static de.unistuttgart.iste.meitrex.common.testutil.TestUsers.userWithMembershipInCourseWithId;
 
 @GraphQlApiTest
-public class AuthorizationTest {
+class AuthorizationTest {
 
     @Autowired
     private AssignmentRepository assignmentRepository;

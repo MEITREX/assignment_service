@@ -46,7 +46,7 @@ import static org.mockito.Mockito.*;
 
 @GraphQlApiTest
 @ContextConfiguration(classes = {MockedCodeAssessmentProviderConfig.class, MockedUserServiceClientConfig.class, MockedCourseServiceClientConfig.class,  MockedTopicPublisherConfig.class})
-public class QueryGetCodeGradingForAssignmentForAdminTest {
+class QueryGetCodeGradingForAssignmentForAdminTest {
 
     private final UUID courseId = UUID.randomUUID();
 

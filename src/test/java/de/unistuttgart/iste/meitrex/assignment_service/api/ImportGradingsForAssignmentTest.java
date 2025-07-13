@@ -30,8 +30,6 @@ import java.util.UUID;
 import static de.unistuttgart.iste.meitrex.common.testutil.TestUsers.userWithMembershipInCourseWithId;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Mockito.when;
-
 
 @GraphQlApiTest
 @ContextConfiguration(classes = {
@@ -39,7 +37,7 @@ import static org.mockito.Mockito.when;
         MockedUserServiceClientConfig.class
 
 })
-public class ImportGradingsForAssignmentTest {
+class ImportGradingsForAssignmentTest {
 
     @Autowired
     private GradingService gradingService;

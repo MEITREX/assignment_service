@@ -25,7 +25,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 @GraphQlApiTest
-public class QueryGetGradingForAssignmentForStudentTest {
+class QueryGetGradingForAssignmentForStudentTest {
 
     @Autowired
     private AssignmentRepository assignmentRepository;

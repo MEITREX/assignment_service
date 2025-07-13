@@ -1,10 +1,8 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service;
 
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExternalCourseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.CodeAssignmentMetadataEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
@@ -42,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-public class AssignmentServiceTest {
+class AssignmentServiceTest {
 
     private final AssignmentRepository assignmentRepository = Mockito.mock(AssignmentRepository.class);
     private final GradingRepository gradingRepository = Mockito.mock(GradingRepository.class);

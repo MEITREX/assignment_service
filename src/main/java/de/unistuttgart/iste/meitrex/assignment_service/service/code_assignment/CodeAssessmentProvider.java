@@ -1,9 +1,6 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment;
 
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
-import de.unistuttgart.iste.meitrex.generated.dto.Assignment;
 import de.unistuttgart.iste.meitrex.generated.dto.ExternalCourse;
 import de.unistuttgart.iste.meitrex.generated.dto.ExternalServiceProviderDto;
 import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
