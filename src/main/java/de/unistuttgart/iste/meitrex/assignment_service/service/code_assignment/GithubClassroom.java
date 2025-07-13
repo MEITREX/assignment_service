@@ -354,7 +354,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
                 ZipEntry entry;
                 while ((entry = zis.getNextEntry()) != null) {
-                    if (!entry.getName().equals("run-autograding-tests.txt")) {
+                    if (!entry.getName().endsWith("run-autograding-tests.txt")) {
                         continue;
                     }
 
