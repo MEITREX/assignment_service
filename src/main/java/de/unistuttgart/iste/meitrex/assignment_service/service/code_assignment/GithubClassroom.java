@@ -194,8 +194,12 @@ public class GithubClassroom implements CodeAssessmentProvider {
                                 // Remove empty lines left behind after tag removal
                                 .replaceAll("(?m)^\\s+$", "");
                     }
-                } catch (IOException | InterruptedException e) {
-                    // Ignore README failures
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Interrupted while fetching README", e);
+                } catch (IOException e) {
+                    log.warn("Failed to fetch README from GitHub", e);
+                    // If README fetch fails, we can still save the assignment without it
                 }
 
                 externalCodeAssignmentRepository.save(ExternalCodeAssignmentEntity.builder()
@@ -215,10 +219,11 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     externalCodeAssignmentRepository.deleteById(pk);
                 }
             }
-        } catch (IOException | InterruptedException | IllegalStateException e) {
-            throw new ExternalPlatformConnectionException("Failed to fetch data from GitHub Classroom: " + e.getMessage());
-        } catch (UserServiceConnectionException e) {
-            throw new UserServiceConnectionException(e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ExternalPlatformConnectionException("Interrupted while fetching data from GitHub Classroom", e);
+        } catch (IOException | IllegalStateException e) {
+            throw new ExternalPlatformConnectionException("Failed to fetch data from GitHub Classroom", e);
         }
     }
 
@@ -280,11 +285,11 @@ public class GithubClassroom implements CodeAssessmentProvider {
             }
 
             return gradings;
-
-        } catch (IOException | InterruptedException e) {
-            throw new ExternalPlatformConnectionException("Failed to fetch grades: " + e.getMessage());
-        } catch (UserServiceConnectionException e) {
-            throw new UserServiceConnectionException(e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ExternalPlatformConnectionException("Interrupted while fetching grades", e);
+        } catch (IOException e) {
+            throw new ExternalPlatformConnectionException("Failed to fetch grades", e);
         }
     }
 
@@ -381,9 +386,13 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
                 throw new ExternalPlatformConnectionException("No grading file found in logs.");
             }
-        } catch (IOException | InterruptedException e) {
-            throw new ExternalPlatformConnectionException("Failed to fetch student grade: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ExternalPlatformConnectionException("Interrupted while fetching student grade", e);
+        } catch (IOException e) {
+            throw new ExternalPlatformConnectionException("Failed to fetch student grade", e);
         }
+
     }
 
     @Override
@@ -492,9 +501,13 @@ public class GithubClassroom implements CodeAssessmentProvider {
             JsonObject repo = JsonParser.parseString(response.body()).getAsJsonObject();
             return repo.has("html_url") ? repo.get("html_url").getAsString() : null;
 
-        } catch (IOException | InterruptedException e) {
-            throw new ExternalPlatformConnectionException("Error fetching student repo link: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ExternalPlatformConnectionException("Interrupted while fetching student repo link", e);
+        } catch (IOException e) {
+            throw new ExternalPlatformConnectionException("Error fetching student repo link", e);
         }
+
     }
 
     public ExternalCourse getExternalCourse(final String courseTitle, final LoggedInUser currentUser)
@@ -521,8 +534,11 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
             return new ExternalCourse(classroom.get("name").getAsString(), classroom.get("url").getAsString());
 
-        } catch (IOException | InterruptedException e) {
-            throw new ExternalPlatformConnectionException("Error fetching external course: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ExternalPlatformConnectionException("Interrupted while fetching external course", e);
+        } catch (IOException e) {
+            throw new ExternalPlatformConnectionException("Error fetching external course", e);
         }
     }
 }
