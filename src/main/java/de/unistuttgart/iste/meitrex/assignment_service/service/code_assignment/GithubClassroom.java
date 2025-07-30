@@ -455,13 +455,15 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     break;
                 }
 
-                String score = cells[2].trim();
+                String testScore = cells[2].trim();
+                String maxScore = cells[3].trim();
                 String resolvedName = resolvedIndex < resolvedNames.size() ? resolvedNames.get(resolvedIndex) : "Unknown";
                 resolvedIndex++;
 
                 tableHtml.append("<tr><td>").append(resolvedName)
                         .append("</td><td style=\"text-align:center;\">")
-                        .append(score).append("</td></tr>\n");
+                        .append(testScore).append("/").append(maxScore)
+                        .append("</td></tr>\n");
             }
         }
 
