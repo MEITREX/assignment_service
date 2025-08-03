@@ -113,31 +113,44 @@ public class GradingService {
                     .toList();
         }
 
+
+
         // we must update the total credits of the assignment based on an external grading which we get from
         // GH autograding workflow run which contains total_points
         // we do it since GH Api is buggy and doesn't provide the total points before the first grading
         if (!externalGradings.isEmpty()) {
-            final ExternalGrading tempGrading = externalGradings.getFirst();
-            final String[] repoLink = new String[1];
-            gradingRepository.findAllByPrimaryKey_AssessmentId(assignment.getId()).stream()
-                    .filter(gradingEntity -> userIdToExternalId.get(gradingEntity.getPrimaryKey().getStudentId())
-                            .equals(tempGrading.externalUsername()))
-                    .findFirst()
-                    .ifPresent(gradingEntity ->
-                        repoLink[0] = gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink()
-                    );
+            // we take arbitrary grading with a date, since if it has a date then it must have been graded
+            Optional<ExternalGrading> tempGrading = externalGradings.stream()
+                    .filter(g -> g.date() != null)
+                    .findFirst();
 
-            // totalPoints of tempGrading from the list is always 0 because of buggy GH API, thats why the call here
-            if (repoLink[0] != null) {
-                ExternalGrading externalGrading = null;
-                try {
-                    externalGrading = codeAssessmentProvider.syncGradeForStudent(repoLink[0], currentUser);
-                } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
-                    log.error("Failed to sync student grade for assignment {} and student {}: {}", assignment.getId(), currentUser.getId(), e.toString());
-                }
-                if (externalGrading != null) {
-                    assignment.setTotalCredits(externalGrading.totalPoints());
-                    assignmentRepository.save(assignment);
+            if (tempGrading.isPresent()) {
+                final String[] repoLink = new String[1];
+                // Search for the first grading entity in the DB that matches the external username of the temp grading.
+                gradingRepository.findAllByPrimaryKey_AssessmentId(assignment.getId()).stream()
+                        .filter(gradingEntity -> {
+                            UUID studentId = gradingEntity.getPrimaryKey().getStudentId();
+                            String externalUsername = userIdToExternalId.get(studentId); // Map internal user ID to GitHub username.
+                            return externalUsername != null && externalUsername.equals(tempGrading.get().externalUsername());
+                        })
+                        .findFirst()
+                        // use the repo link to get the total points
+                        .ifPresent(gradingEntity ->
+                                repoLink[0] = gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink()
+                        );
+
+                // totalPoints of tempGrading from the list is always 0 because of buggy GH API, thats why the call here
+                if (repoLink[0] != null) {
+                    ExternalGrading externalGrading = null;
+                    try {
+                        externalGrading = codeAssessmentProvider.syncGradeForStudent(repoLink[0], currentUser);
+                    } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
+                        log.error("Failed to sync student grade for assignment {} and student {}: {}", assignment.getId(), currentUser.getId(), e.toString());
+                    }
+                    if (externalGrading != null) {
+                        assignment.setTotalCredits(externalGrading.totalPoints());
+                        assignmentRepository.save(assignment);
+                    }
                 }
             }
         }

@@ -449,23 +449,62 @@ public class GithubClassroom implements CodeAssessmentProvider {
                 for (int i = 1; i < cells.length - 1; i++) {
                     tableHtml.append("<th>").append(cells[i].trim()).append("</th>");
                 }
+                tableHtml.append("<th>Error logs</th>");
                 tableHtml.append("</tr></thead>\n<tbody>\n");
             } else {
                 if (cells[1].trim().equalsIgnoreCase("Total:")) {
                     break;
                 }
 
-                String score = cells[2].trim();
+                String testScore = cells[2].trim();
+                String maxScore = cells[3].trim();
                 String resolvedName = resolvedIndex < resolvedNames.size() ? resolvedNames.get(resolvedIndex) : "Unknown";
                 resolvedIndex++;
 
                 tableHtml.append("<tr><td>").append(resolvedName)
                         .append("</td><td style=\"text-align:center;\">")
-                        .append(score).append("</td></tr>\n");
+                        .append(testScore).append("/").append(maxScore)
+                        .append("</td>");
+
+                if (testScore.equals("0")) {
+                    for (int i = 0; i < lines.length; i++) {
+                        if (lines[i].contains(resolvedName)) {
+                            int start = i;
+                            for (int j = i + 1; j < lines.length; j++) {
+                                if (lines[j].contains("##[endgroup]")) {
+                                    start = j + 1;
+                                    break;
+                                }
+                            }
+
+                            StringBuilder errorLogs = new StringBuilder();
+                            for (int j = start; j < lines.length; j++) {
+                                if (lines[j].contains("##[group]")) break;
+                                errorLogs.append(lines[j].trim()).append("<br>");
+                            }
+
+                            String sanitized = errorLogs.toString()
+                                    .replace("<br>", "___BR___") // temp
+                                    .replaceAll("<", "&lt;")
+                                    .replaceAll(">", "&gt;")
+                                    .replace("___BR___", "<br>");
+
+                            tableHtml.append("<td colspan=\"1\" style=\"white-space: pre-wrap;\">")
+                                    .append(sanitized)
+                                    .append("</td>");
+                            break;
+                        }
+                    }
+                } else {
+                    tableHtml.append("<td></td>");
+                }
+
+                tableHtml.append("</tr>\n");
             }
         }
 
         tableHtml.append("</tbody></table>");
+
         return tableHtml.toString();
     }
 
