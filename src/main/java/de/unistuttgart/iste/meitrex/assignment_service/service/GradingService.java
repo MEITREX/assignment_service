@@ -74,12 +74,17 @@ public class GradingService {
                         .orElseThrow(() -> new NoAccessToCourseException(assignment.getCourseId(), "User is not a member of the course."));
 
         if (assignment.getAssignmentType() == AssignmentType.CODE_ASSIGNMENT){
-            List<Grading> gradings;
-            if (courseMembership.getRole() == LoggedInUser.UserRoleInCourse.STUDENT) {
-                gradings = getCodeAssignmentGradingForStudent(assignment, currentUser);
-            } else {
-                gradings = getCodeAssignmentGradingForAdmin(assignment, currentUser);
+            List<Grading> gradings = new ArrayList<>();
+
+            // Always get the current student's grading so that they see it in student's view (even if the user is a tutor/admin)
+            gradings.addAll(getCodeAssignmentGradingForStudent(assignment, currentUser));
+
+            // If the user is not a student, also fetch all gradings
+            if (courseMembership.getRole() != LoggedInUser.UserRoleInCourse.STUDENT) {
+                gradings.clear(); // avoid duplicates
+                gradings.addAll(getCodeAssignmentGradingForAdmin(assignment, currentUser));
             }
+
             // publish content progressed event for each grading
             for (Grading grading: gradings){
                 if (grading.getAchievedCredits() != null && assignment.getTotalCredits() != null) {
