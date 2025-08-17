@@ -1,12 +1,12 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service;
 
-import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExternalCourseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.ExerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.exercise.SubexerciseEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.grading.GradingEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCourseRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
@@ -49,6 +49,7 @@ public class AssignmentService {
     private final CodeAssessmentProvider codeAssessmentProvider;
     private final ExternalCodeAssignmentRepository externalCodeAssignmentRepository;
     private final GradingRepository gradingRepository;
+    private final ExternalCourseRepository externalCourseRepository;
 
     /**
      * Returns all assignments that are linked to the given assessment ids
@@ -650,7 +651,14 @@ public class AssignmentService {
             String courseTitle = courseServiceClient.queryCourseById(courseId).getTitle();
 
             ExternalCourse external = codeAssessmentProvider.getExternalCourse(courseTitle, currentUser);
-            return new ExternalCourse(courseTitle, external.getUrl());
+            ExternalCourseEntity externalCourseEntity = ExternalCourseEntity.builder().
+                    courseTitle(courseTitle)
+                    .url(external.getUrl())
+                    .organizationName(external.getOrganizationName())
+                    .build();
+
+            externalCourseRepository.save(externalCourseEntity);
+            return new ExternalCourse(courseTitle, external.getUrl(), external.getOrganizationName());
 
         } catch (Exception e) {
             log.warn("Could not fetch external course from provider: {}", e.getMessage());

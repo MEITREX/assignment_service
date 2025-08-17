@@ -18,6 +18,9 @@ public class ExternalCourseEntity implements IWithId<String> {
     @Column(nullable = false)
     private String url;
 
+    @Column(nullable = false)
+    private String organizationName;
+
     @Override
     public String getId() {
         return courseTitle;

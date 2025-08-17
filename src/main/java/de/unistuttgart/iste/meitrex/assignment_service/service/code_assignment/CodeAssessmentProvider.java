@@ -59,11 +59,12 @@ public interface CodeAssessmentProvider {
      * Locates the student's repository for the given assignment.
      *
      * @param assignmentName the name of the assignment
+     * @param organizationName the name of the organization (e.g., GitHub organization) used to find the repository
      * @param currentUser the user performing the lookup; must be a STUDENT in the external course
      * @throws ExternalPlatformConnectionException if the external platform is unreachable or returns an error
      * @throws UserServiceConnectionException      if user-related data cannot be resolved
      */
-    String findRepository(String assignmentName, LoggedInUser currentUser)
+    String findRepository(String assignmentName, String organizationName, LoggedInUser currentUser)
             throws ExternalPlatformConnectionException, UserServiceConnectionException;
 
     /**

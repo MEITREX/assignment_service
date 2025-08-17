@@ -65,6 +65,7 @@ public class GradingService {
     private final ExternalSystemConfiguration externalSystemConfiguration;
     private final CodeAssessmentProvider codeAssessmentProvider;
     private final AssignmentRepository assignmentRepository;
+    private final ExternalCourseRepository externalCourseRepository;
 
     public List<Grading> getGradingsForAssignment(final UUID assignmentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId);
@@ -74,11 +75,15 @@ public class GradingService {
                         .orElseThrow(() -> new NoAccessToCourseException(assignment.getCourseId(), "User is not a member of the course."));
 
         if (assignment.getAssignmentType() == AssignmentType.CODE_ASSIGNMENT){
-            List<Grading> gradings;
-            if (courseMembership.getRole() == LoggedInUser.UserRoleInCourse.STUDENT) {
-                gradings = getCodeAssignmentGradingForStudent(assignment, currentUser);
-            } else {
-                gradings = getCodeAssignmentGradingForAdmin(assignment, currentUser);
+            List<Grading> gradings = new ArrayList<>();
+
+            // Always get the current student's grading so that they see it in student's view (even if the user is a tutor/admin)
+            gradings.addAll(getCodeAssignmentGradingForStudent(assignment, currentUser));
+
+            // If the user is not a student, also fetch all gradings
+            if (courseMembership.getRole() != LoggedInUser.UserRoleInCourse.STUDENT) {
+                gradings.clear(); // avoid duplicates
+                gradings.addAll(getCodeAssignmentGradingForAdmin(assignment, currentUser));
             }
             // publish content progressed event for each grading
             for (Grading grading: gradings){
@@ -207,10 +212,14 @@ public class GradingService {
                         .orElseThrow(() -> new EntityNotFoundException("Assignment with externalId %s not found".formatted(assignment.getExternalId())))
                         .getMetadata().getName();
 
-                String repoLink = codeAssessmentProvider.findRepository(assignmentName, currentUser);
+                String courseTitle = courseServiceClient.queryCourseById(assignment.getCourseId()).getTitle();
+                // no isPresent check, since if we are here, the external course must exist
+                String organizationName = externalCourseRepository.findById(courseTitle).get().getOrganizationName();
+
+                String repoLink = codeAssessmentProvider.findRepository(assignmentName, organizationName, currentUser);
                 gradingEntity.getCodeAssignmentGradingMetadata().setRepoLink(repoLink);
             } catch (ExternalPlatformConnectionException | UserServiceConnectionException |
-                     ContentServiceConnectionException e) {
+                     ContentServiceConnectionException | CourseServiceConnectionException e) {
                 log.error("Failed to find repository for assignment {} and student {}: {}", assignment.getId(), currentUser.getId(), e.toString());
             }
         }

@@ -53,4 +53,9 @@ type ExternalCourse {
     The url to the course.
     """
     url: String!
+
+    """
+    The Github organization name the classroom belongs to.
+    """
+    organizationName: String!
 }
