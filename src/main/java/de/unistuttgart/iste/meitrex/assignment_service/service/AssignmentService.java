@@ -658,7 +658,7 @@ public class AssignmentService {
                     .build();
 
             externalCourseRepository.save(externalCourseEntity);
-            return new ExternalCourse(courseTitle, external.getUrl(), external.getOrganizationName());
+            return external;
 
         } catch (Exception e) {
             log.warn("Could not fetch external course from provider: {}", e.getMessage());

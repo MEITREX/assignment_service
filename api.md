@@ -800,6 +800,15 @@ The url to the course.
 
 </td>
 </tr>
+<tr>
+<td colspan="2" valign="top"><strong id="externalcourse.organizationname">organizationName</strong></td>
+<td valign="top"><a href="#string">String</a>!</td>
+<td>
+
+The Github organization name the classroom belongs to.
+
+</td>
+</tr>
 </tbody>
 </table>
 
