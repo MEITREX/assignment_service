@@ -85,6 +85,7 @@ public class GradingService {
                 gradings.clear(); // avoid duplicates
                 gradings.addAll(getCodeAssignmentGradingForAdmin(assignment, currentUser));
             }
+
             // publish content progressed event for each grading
             for (Grading grading: gradings){
                 if (grading.getAchievedCredits() != null && assignment.getTotalCredits() != null) {
