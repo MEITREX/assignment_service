@@ -6,6 +6,7 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assign
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.mapper.AssignmentMapper;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCodeAssignmentRepository;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCourseRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.GradingRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.CodeAssessmentProvider;
 import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentValidator;
@@ -51,8 +52,9 @@ class AssignmentServiceTest {
     private final ContentServiceClient contentServiceClient = Mockito.mock(ContentServiceClient.class);
     private final CodeAssessmentProvider codeAssessmentProvider = Mockito.mock(CodeAssessmentProvider.class);
     private final ExternalCodeAssignmentRepository externalCodeAssignmentRepository = Mockito.mock(ExternalCodeAssignmentRepository.class);
+    private final ExternalCourseRepository externalCourseRepository = Mockito.mock(ExternalCourseRepository.class);
 
-    private final AssignmentService assignmentService = new AssignmentService(assignmentRepository, assignmentMapper, assignmentValidator, topicPublisher, courseServiceClient, contentServiceClient, codeAssessmentProvider, externalCodeAssignmentRepository, gradingRepository);
+    private final AssignmentService assignmentService = new AssignmentService(assignmentRepository, assignmentMapper, assignmentValidator, topicPublisher, courseServiceClient, contentServiceClient, codeAssessmentProvider, externalCodeAssignmentRepository, gradingRepository, externalCourseRepository);
 
     private UUID courseId = UUID.randomUUID();
     private String courseTitle;
@@ -259,14 +261,17 @@ class AssignmentServiceTest {
 
     @Test
     void fetchesAndSavesCourse() throws Exception {
-        ExternalCourse external = new ExternalCourse(courseTitle, "https://classroom.github.com/mycourse");
+        String organizationName = "TestOrg";
+        String url = "https://classroom.github.com/mycourse";
+        ExternalCourse external = new ExternalCourse(courseTitle, url, organizationName);
         when(codeAssessmentProvider.getExternalCourse(courseTitle, loggedInUser)).thenReturn(external);
 
         ExternalCourse course = assignmentService.getExternalCourse(courseId, loggedInUser);
 
         assertNotNull(course);
         assertEquals(courseTitle, course.getCourseTitle());
-        assertEquals("https://classroom.github.com/mycourse", course.getUrl());
+        assertEquals(organizationName, course.getOrganizationName());
+        assertEquals(url, course.getUrl());
     }
 
     @Test

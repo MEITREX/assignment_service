@@ -2,9 +2,13 @@ package de.unistuttgart.iste.meitrex.assignment_service.api;
 
 
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.ExternalCourseEntity;
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.ExternalCourseRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.test_config.*;
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.meitrex.common.event.ContentProgressedEvent;
+import de.unistuttgart.iste.meitrex.course_service.client.CourseServiceClient;
+import de.unistuttgart.iste.meitrex.course_service.exception.CourseServiceConnectionException;
 import de.unistuttgart.iste.meitrex.user_service.exception.UserServiceConnectionException;
 import de.unistuttgart.iste.meitrex.content_service.client.ContentServiceClient;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.AssignmentEntity;
@@ -66,6 +70,9 @@ class QueryGetCodeGradingForAssignmentForStudentTest {
     private ContentServiceClient contentServiceClient;
 
     @Autowired
+    private CourseServiceClient courseServiceClient;
+
+    @Autowired
     private AssignmentMapper assignmentMapper;
 
     @Autowired
@@ -73,6 +80,8 @@ class QueryGetCodeGradingForAssignmentForStudentTest {
 
     @Autowired
     private TopicPublisher topicPublisher;
+    @Autowired
+    private ExternalCourseRepository externalCourseRepository;
 
     @Test
     @Transactional
@@ -109,7 +118,8 @@ class QueryGetCodeGradingForAssignmentForStudentTest {
         ExternalGrading externalGrading = new ExternalGrading("ext-user", gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink(), OffsetDateTime.now(),
                 "<table>feedback</table>", 42.0, 60.0);
 
-        when(codeAssessmentProvider.findRepository(eq(assignment.getExternalId()), any())).thenReturn(gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink());
+        when(codeAssessmentProvider.findRepository(eq(assignment.getExternalId()), any(), any())).thenReturn(gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink());
+
         when(codeAssessmentProvider.syncGradeForStudent(eq(gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink()), any())).thenReturn(externalGrading);
 
         String query = """
@@ -162,7 +172,7 @@ class QueryGetCodeGradingForAssignmentForStudentTest {
     @Test
     @Transactional
     void testStudentGetsCodeAssignmentGradingCreated(GraphQlTester tester)
-            throws ExternalPlatformConnectionException, ContentServiceConnectionException, UserServiceConnectionException {
+            throws ExternalPlatformConnectionException, ContentServiceConnectionException, UserServiceConnectionException, CourseServiceConnectionException {
 
         final UUID studentId = loggedInUser.getId();
         AssignmentEntity assignment = testUtils.populateAssignmentRepositoryWithCodeAssignment(assignmentRepository, courseId);
@@ -192,7 +202,24 @@ class QueryGetCodeGradingForAssignmentForStudentTest {
                         .setTagNames(List.of("code", "assignment")).build()).build();
 
         when(contentServiceClient.queryContentsOfCourse(studentId, courseId)).thenReturn(List.of(mockedAssessment));
-        when(codeAssessmentProvider.findRepository(eq(assignmentName), any())).thenReturn("https://github.com/user/repo");
+
+        Course mockCourse = Course.builder()
+                .setId(assignment.getCourseId())
+                .setTitle("courseTitle")
+                .build();
+
+        when(courseServiceClient.queryCourseById(eq(assignment.getCourseId())))
+                .thenReturn(mockCourse);
+
+        externalCourseRepository.save(
+                new ExternalCourseEntity("courseTitle", "https://external.provider.url", "TestOrg")
+        );
+
+        when(codeAssessmentProvider.findRepository(
+                eq(assignmentName),
+                eq("TestOrg"),
+                any(LoggedInUser.class)))
+                .thenReturn("https://github.com/user/repo");
 
         ExternalGrading externalGrading = new ExternalGrading(
                 "ext-student-id",

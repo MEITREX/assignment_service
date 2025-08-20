@@ -65,6 +65,7 @@ public class GradingService {
     private final ExternalSystemConfiguration externalSystemConfiguration;
     private final CodeAssessmentProvider codeAssessmentProvider;
     private final AssignmentRepository assignmentRepository;
+    private final ExternalCourseRepository externalCourseRepository;
 
     public List<Grading> getGradingsForAssignment(final UUID assignmentId, final LoggedInUser currentUser) {
         final AssignmentEntity assignment = assignmentService.requireAssignmentExists(assignmentId);
@@ -212,10 +213,14 @@ public class GradingService {
                         .orElseThrow(() -> new EntityNotFoundException("Assignment with externalId %s not found".formatted(assignment.getExternalId())))
                         .getMetadata().getName();
 
-                String repoLink = codeAssessmentProvider.findRepository(assignmentName, currentUser);
+                String courseTitle = courseServiceClient.queryCourseById(assignment.getCourseId()).getTitle();
+                // no isPresent check, since if we are here, the external course must exist
+                String organizationName = externalCourseRepository.findById(courseTitle).get().getOrganizationName();
+
+                String repoLink = codeAssessmentProvider.findRepository(assignmentName, organizationName, currentUser);
                 gradingEntity.getCodeAssignmentGradingMetadata().setRepoLink(repoLink);
             } catch (ExternalPlatformConnectionException | UserServiceConnectionException |
-                     ContentServiceConnectionException e) {
+                     ContentServiceConnectionException | CourseServiceConnectionException e) {
                 log.error("Failed to find repository for assignment {} and student {}: {}", assignment.getId(), currentUser.getId(), e.toString());
             }
         }

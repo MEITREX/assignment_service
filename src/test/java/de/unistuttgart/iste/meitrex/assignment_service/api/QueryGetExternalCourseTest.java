@@ -47,6 +47,7 @@ class QueryGetExternalCourseTest {
     void testGetExternalCourseFetchedFromProvider(GraphQlTester tester) throws CourseServiceConnectionException, ExternalPlatformConnectionException, UserServiceConnectionException {
         String courseTitle = "Test Course";
         String externalUrl = "https://external.provider.url";
+        String organizationName = "TestOrg";
 
         // Mock course service
         Course mockCourse = Course.builder()
@@ -61,7 +62,7 @@ class QueryGetExternalCourseTest {
         when(courseServiceClient.queryCourseById(courseId)).thenReturn(mockCourse);
 
         // Mock external provider
-        ExternalCourse externalCourse = new ExternalCourse(courseTitle, externalUrl);
+        ExternalCourse externalCourse = new ExternalCourse(courseTitle, externalUrl, organizationName);
         when(codeAssessmentProvider.getExternalCourse(courseTitle, loggedInUser)).thenReturn(externalCourse);
 
         String query = """
@@ -69,6 +70,7 @@ class QueryGetExternalCourseTest {
                     getExternalCourse(courseId: $courseId) {
                         courseTitle
                         url
+                        organizationName
                     }
                 }
             """;
@@ -81,6 +83,7 @@ class QueryGetExternalCourseTest {
                 .get();
 
         assertThat(result.getCourseTitle()).isEqualTo(courseTitle);
+        assertThat(result.getOrganizationName()).isEqualTo(organizationName);
         assertThat(result.getUrl()).isEqualTo(externalUrl);
     }
 }

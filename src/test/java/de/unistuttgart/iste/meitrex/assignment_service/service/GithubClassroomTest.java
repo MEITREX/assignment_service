@@ -49,9 +49,7 @@ class GithubClassroomTest {
                 userServiceClient,
                 assignmentRepository,
                 externalCodeAssignmentRepository,
-                "org-name",
                 mockWebServer.url("/").toString()
-
         );
     }
 
@@ -70,18 +68,36 @@ class GithubClassroomTest {
         );
 
         String responseBody = """
-        [
-          { "name": "My Course", "url": "https://classroom.github.com/classrooms/1234" }
-        ]
-        """;
+[
+  { 
+      "id": 1234,
+        "name": "My Course",
+    "url": "https://classroom.github.com/classrooms/1234"
+  }
+]
+""";
+
         mockWebServer.enqueue(new MockResponse()
                 .setBody(responseBody)
+                .setHeader("Content-Type", "application/json"));
+
+        String detailResponse = """
+    {
+      "id": 1234,
+      "name": "My Course",
+      "url": "https://classroom.github.com/classrooms/1234",
+      "organization": { "login": "testOrg" }
+    }
+    """;
+        mockWebServer.enqueue(new MockResponse()
+                .setBody(detailResponse)
                 .setHeader("Content-Type", "application/json"));
 
         ExternalCourse result = githubClassroom.getExternalCourse("My Course", user);
 
         assertEquals("My Course", result.getCourseTitle());
         assertEquals("https://classroom.github.com/classrooms/1234", result.getUrl());
+        assertEquals("testOrg", result.getOrganizationName());
     }
 
     @Test
@@ -354,13 +370,12 @@ class GithubClassroomTest {
 
         mockWebServer.enqueue(new MockResponse()
                 .setBody("""
-                {
-                  "html_url": "%s"
-                }
-            """.formatted(expectedUrl))
-                .setHeader("Content-Type", "application/json"));
+        {
+          "html_url": "%s"
+        }
+        """.formatted(expectedUrl)));
 
-        String actualUrl = githubClassroom.findRepository("Assignment 1", user);
+        String actualUrl = githubClassroom.findRepository("Assignment 1", "organizationName", user);
 
         assertEquals(expectedUrl, actualUrl);
     }

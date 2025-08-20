@@ -79,15 +79,12 @@ public class GithubClassroom implements CodeAssessmentProvider {
     private final UserServiceClient userServiceClient;
     private final AssignmentRepository assignmentRepository;
     private final ExternalCodeAssignmentRepository externalCodeAssignmentRepository;
-    private final String organizationName;
 
     public GithubClassroom(UserServiceClient userServiceClient, AssignmentRepository assignmentRepository,
-                           ExternalCodeAssignmentRepository externalCodeAssignmentRepository,
-                           @Value("${github.organization_name}") String organizationName, @Value("${github.api_basePath:https://api.github.com}") String basePath) {
+                           ExternalCodeAssignmentRepository externalCodeAssignmentRepository, @Value("${github.api_basePath:https://api.github.com}") String basePath) {
         this.userServiceClient = userServiceClient;
         this.assignmentRepository = assignmentRepository;
         this.externalCodeAssignmentRepository = externalCodeAssignmentRepository;
-        this.organizationName = organizationName;
         this.basePath = basePath;
     }
 
@@ -509,7 +506,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
     }
 
     @Override
-    public String findRepository(final String assignmentName, final LoggedInUser currentUser)
+    public String findRepository(final String assignmentName, final String organizationName, final LoggedInUser currentUser)
             throws ExternalPlatformConnectionException, UserServiceConnectionException {
         try {
             AccessToken queryTokenResponse = userServiceClient.queryAccessToken(currentUser, NAME);
@@ -571,7 +568,26 @@ public class GithubClassroom implements CodeAssessmentProvider {
             JsonArray classrooms = JsonParser.parseString(classroomsResponse.body()).getAsJsonArray();
             JsonObject classroom = findByNameIgnoreCase(classrooms, "name", courseTitle);
 
-            return new ExternalCourse(classroom.get("name").getAsString(), classroom.get("url").getAsString());
+            long classroomId = classroom.get("id").getAsLong();
+            HttpRequest courseRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(basePath + "/classrooms/" + classroomId))
+                    .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                    .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                    .header(HEADER_API_VERSION, API_VERSION)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> courseResponse = client.send(courseRequest, HttpResponse.BodyHandlers.ofString());
+            if (courseResponse.statusCode() != 200) {
+                throw new ExternalPlatformConnectionException("Failed to fetch course details: " + courseResponse.body());
+            }
+
+            classroom = JsonParser.parseString(courseResponse.body()).getAsJsonObject();
+
+            JsonObject organization = classroom.getAsJsonObject("organization");
+            String organizationName = organization.has("login") ? organization.get("login").getAsString() : null;
+
+            return new ExternalCourse(classroom.get("name").getAsString(), classroom.get("url").getAsString(), organizationName);
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
