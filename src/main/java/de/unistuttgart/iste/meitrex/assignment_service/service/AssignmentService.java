@@ -306,6 +306,7 @@ public class AssignmentService {
                 .contentId(assignmentEntity.getAssessmentId())
                 .hintsUsed(0)
                 .success(success)
+                .contentType(ContentProgressedEvent.ContentType.ASSIGNMENT)
                 .timeToComplete(null)
                 .correctness(correctness)
                 .responses(responses)

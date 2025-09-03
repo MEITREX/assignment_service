@@ -110,7 +110,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'de.unistuttgart.iste.meitrex:meitrex-common:1.2.8'
+    implementation 'de.unistuttgart.iste.meitrex:meitrex-common:1.4.5'
     implementation 'de.unistuttgart.iste.meitrex:content_service:1.2.0'
     implementation 'de.unistuttgart.iste.meitrex:course_service:0.1.0'
     implementation 'de.unistuttgart.iste.meitrex:user_service:0.1.0'
