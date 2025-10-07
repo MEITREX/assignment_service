@@ -122,6 +122,19 @@ public class AssignmentService {
         ));
 
         final AssignmentEntity savedAssignmentEntity = assignmentRepository.save(mappedAssignmentEntity);
+        String title = "You have a new Code Assignment!";
+        String message = "New Code Assignment!" + createAssignmentInput.getDescription();
+
+        String pageLink = "/courses/" + courseId + "/assignment/" + assessmentId;
+        topicPublisher.notificationEvent(
+                courseId,
+                null,
+                ServerSource.COURSE,
+                pageLink,
+                title,
+                message
+        );
+        log.info("Published notification for Code Assignment={} to course={}", assessmentId, courseId);
         return assignmentMapper.assignmentEntityToDto(savedAssignmentEntity);
     }
 
