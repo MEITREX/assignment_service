@@ -1,6 +1,7 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment;
 
 import com.google.gson.*;
+import com.github.slugify.Slugify;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.ExternalPlatformConnectionException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.assignment.ExternalCodeAssignmentEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.AssignmentRepository;
@@ -513,7 +514,8 @@ public class GithubClassroom implements CodeAssessmentProvider {
             String token = queryTokenResponse.getAccessToken();
             String githubUsername = queryTokenResponse.getExternalUserId();
 
-            String slug = assignmentName.toLowerCase().replaceAll("\\s+", "-");
+            final Slugify slg = Slugify.builder().build();
+            String slug = slg.slugify(assignmentName);
             String repoName = slug + "-" + githubUsername;
 
             HttpRequest request = HttpRequest.newBuilder()
