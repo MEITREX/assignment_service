@@ -23,6 +23,7 @@ import de.unistuttgart.iste.meitrex.assignment_service.validation.AssignmentVali
 import de.unistuttgart.iste.meitrex.common.dapr.TopicPublisher;
 import de.unistuttgart.iste.meitrex.common.event.ContentProgressedEvent;
 import de.unistuttgart.iste.meitrex.common.event.Response;
+import de.unistuttgart.iste.meitrex.common.event.StudentCodeSubmittedEvent;
 import de.unistuttgart.iste.meitrex.common.exception.NoAccessToCourseException;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
@@ -247,6 +248,22 @@ public class GradingService {
 
             if (assignment.getTotalCredits() == null || (externalGrading.totalPoints() != null && externalGrading.totalPoints() > assignment.getTotalCredits())) {
                 assignment.setTotalCredits(externalGrading.totalPoints());
+            }
+            
+            try {
+                if (codeAssessmentProvider instanceof de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.GithubClassroom githubClassroom) {
+                    de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.StudentCodeSubmission codeSubmission = 
+                        githubClassroom.fetchStudentCode(gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink(), currentUser);
+                    
+                    
+                    codeSubmission.setAssignmentId(assignment.getId());
+                    codeSubmission.setCourseId(assignment.getCourseId());
+                    
+                    publishStudentCodeSubmittedEvent(codeSubmission);
+                }
+            } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
+                log.error("Failed to fetch student code for assignment {} and student {}: {}", 
+                        assignment.getId(), currentUser.getId(), e.toString());
             }
         }
 
@@ -811,6 +828,50 @@ public class GradingService {
             externalAssignmentList.add(externalAssignment);
         }
         return externalAssignmentList;
+    }
+    
+    /**
+     * Publishes a StudentCodeSubmittedEvent to the Dapr topic.
+     * This event will contain the student's code submission including all source files.
+     * 
+     * NOTE: This assumes that a StudentCodeSubmittedEvent class exists in the common module
+     * and TopicPublisher has a corresponding method to publish it.
+     * If the event doesn't exist yet, it should be created with the following structure:
+     * - studentId: UUID
+     * - assignmentId: UUID
+     * - courseId: UUID
+     * - repositoryUrl: String
+     * - commitSha: String
+     * - commitTimestamp: OffsetDateTime
+     * - files: Map<String, String>
+     * - branch: String
+     *
+     * @param codeSubmission the student code submission containing all files and metadata
+     */
+    private void publishStudentCodeSubmittedEvent(de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.StudentCodeSubmission codeSubmission) {
+        log.info("Publishing StudentCodeSubmittedEvent for student {} on assignment {} (total files: {})", 
+                codeSubmission.getStudentId(), 
+                codeSubmission.getAssignmentId(),
+                codeSubmission.getFiles().size());
+        
+        StudentCodeSubmittedEvent event = StudentCodeSubmittedEvent.builder()
+                .studentId(codeSubmission.getStudentId())
+                .assignmentId(codeSubmission.getAssignmentId())
+                .courseId(codeSubmission.getCourseId())
+                .repositoryUrl(codeSubmission.getRepositoryUrl())
+                .commitSha(codeSubmission.getCommitSha())
+                .commitTimestamp(codeSubmission.getCommitTimestamp())
+                .files(codeSubmission.getFiles())
+                .branch(codeSubmission.getBranch())
+                .build();
+        
+        topicPublisher.notifyStudentCodeSubmitted(event);
+        
+        log.debug("Code submission details: repository={}, commit={}, branch={}, files={}", 
+                codeSubmission.getRepositoryUrl(),
+                codeSubmission.getCommitSha(),
+                codeSubmission.getBranch(),
+                codeSubmission.getFiles().keySet());
     }
 
 }
