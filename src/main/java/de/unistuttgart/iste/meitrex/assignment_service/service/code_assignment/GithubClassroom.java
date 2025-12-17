@@ -30,7 +30,9 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -596,6 +598,142 @@ public class GithubClassroom implements CodeAssessmentProvider {
             throw new ExternalPlatformConnectionException("Interrupted while fetching external course", e);
         } catch (IOException e) {
             throw new ExternalPlatformConnectionException("Error fetching external course", e);
+        }
+    }
+    
+    /**
+     * Fetches the source code from a student's GitHub repository.
+     * Retrieves all files from the repository's default branch.
+     *
+     * @param repoLink the GitHub repository URL
+     * @param currentUser the currently logged-in user
+     * @return StudentCodeSubmission containing all source files and metadata
+     * @throws ExternalPlatformConnectionException if the GitHub API is unreachable or returns an error
+     * @throws UserServiceConnectionException if user-related data cannot be resolved
+     */
+    public StudentCodeSubmission fetchStudentCode(String repoLink, LoggedInUser currentUser)
+            throws ExternalPlatformConnectionException, UserServiceConnectionException {
+        try {
+            AccessToken tokenResponse = userServiceClient.queryAccessToken(currentUser, NAME);
+            String token = tokenResponse.getAccessToken();
+
+            URI uri = URI.create(repoLink);
+            String[] parts = uri.getPath().split("/");
+            if (parts.length < 3) {
+                throw new ExternalPlatformConnectionException("Invalid repo URL: " + repoLink);
+            }
+            String owner = parts[1];
+            String repo = parts[2];
+
+            HttpRequest repoRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(basePath + "/repos/" + owner + "/" + repo))
+                    .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                    .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                    .header(HEADER_API_VERSION, API_VERSION)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> repoResponse = client.send(repoRequest, HttpResponse.BodyHandlers.ofString());
+            if (repoResponse.statusCode() != 200) {
+                throw new ExternalPlatformConnectionException("Failed to fetch repository info: " + repoResponse.body());
+            }
+
+            JsonObject repoInfo = JsonParser.parseString(repoResponse.body()).getAsJsonObject();
+            String defaultBranch = repoInfo.get("default_branch").getAsString();
+
+            HttpRequest commitRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(basePath + "/repos/" + owner + "/" + repo + "/commits/" + defaultBranch))
+                    .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                    .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                    .header(HEADER_API_VERSION, API_VERSION)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> commitResponse = client.send(commitRequest, HttpResponse.BodyHandlers.ofString());
+            if (commitResponse.statusCode() != 200) {
+                throw new ExternalPlatformConnectionException("Failed to fetch commit info: " + commitResponse.body());
+            }
+
+            JsonObject commitInfo = JsonParser.parseString(commitResponse.body()).getAsJsonObject();
+            String commitSha = commitInfo.get("sha").getAsString();
+            String commitDateStr = commitInfo.getAsJsonObject("commit")
+                    .getAsJsonObject("committer")
+                    .get("date").getAsString();
+            OffsetDateTime commitDate = OffsetDateTime.parse(commitDateStr);
+
+            Map<String, String> files = new HashMap<>();
+            fetchFilesRecursively(owner, repo, defaultBranch, "", token, files);
+
+            return StudentCodeSubmission.builder()
+                    .studentId(currentUser.getId())
+                    .repositoryUrl(repoLink)
+                    .commitSha(commitSha)
+                    .commitTimestamp(commitDate)
+                    .files(files)
+                    .branch(defaultBranch)
+                    .build();
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ExternalPlatformConnectionException("Interrupted while fetching student code", e);
+        } catch (IOException e) {
+            throw new ExternalPlatformConnectionException("Error fetching student code", e);
+        }
+    }
+
+    /**
+     * Recursively fetches all files from a GitHub repository directory.
+     *
+     * @param owner repository owner
+     * @param repo repository name
+     * @param branch branch name
+     * @param path current path in the repository (empty string for root)
+     * @param token GitHub access token
+     * @param files map to store file paths and their content
+     */
+    private void fetchFilesRecursively(String owner, String repo, String branch, String path, 
+                                      String token, Map<String, String> files) 
+            throws IOException, InterruptedException, ExternalPlatformConnectionException {
+        
+        String urlPath = path.isEmpty() ? "" : "/" + path;
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(basePath + "/repos/" + owner + "/" + repo + "/contents" + urlPath + "?ref=" + branch))
+                .header(HEADER_ACCEPT, ACCEPT_HEADER_JSON)
+                .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                .header(HEADER_API_VERSION, API_VERSION)
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            log.warn("Failed to fetch contents for path '{}': {}", path, response.body());
+            return;
+        }
+
+        JsonArray contents = JsonParser.parseString(response.body()).getAsJsonArray();
+        
+        for (JsonElement element : contents) {
+            JsonObject item = element.getAsJsonObject();
+            String type = item.get("type").getAsString();
+            String itemPath = item.get("path").getAsString();
+            
+            if ("file".equals(type)) {
+                String downloadUrl = item.get("download_url").getAsString();
+                HttpRequest fileRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(downloadUrl))
+                        .header(HEADER_AUTHORIZATION, TOKEN_PREFIX + token)
+                        .GET()
+                        .build();
+                
+                HttpResponse<String> fileResponse = client.send(fileRequest, HttpResponse.BodyHandlers.ofString());
+                if (fileResponse.statusCode() == 200) {
+                    files.put(itemPath, fileResponse.body());
+                } else {
+                    log.warn("Failed to fetch file content for: {}", itemPath);
+                }
+            } else if ("dir".equals(type)) {
+                fetchFilesRecursively(owner, repo, branch, itemPath, token, files);
+            }
         }
     }
 }
