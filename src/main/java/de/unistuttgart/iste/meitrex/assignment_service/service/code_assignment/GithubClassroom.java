@@ -511,6 +511,8 @@ public class GithubClassroom implements CodeAssessmentProvider {
     @Override
     public String findRepository(final String assignmentName, final String organizationName, final LoggedInUser currentUser)
             throws ExternalPlatformConnectionException, UserServiceConnectionException {
+        log.info("[GITHUB-API] >>> findRepository START - assignmentName={}, organizationName={}, userId={}", 
+                assignmentName, organizationName, currentUser.getId());
         try {
             AccessToken queryTokenResponse = userServiceClient.queryAccessToken(currentUser, NAME);
             String token = queryTokenResponse.getAccessToken();
@@ -519,6 +521,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
             final Slugify slg = Slugify.builder().build();
             String slug = slg.slugify(assignmentName);
             String repoName = slug + "-" + githubUsername;
+            log.info("[GITHUB-API] Constructed repository name: {}", repoName);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(basePath + "/repos/" + organizationName + "/" + repoName))
@@ -529,6 +532,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            log.info("[GITHUB-API] GitHub API response status: {}", response.statusCode());
 
             if (response.statusCode() == 404) {
                 return null;
@@ -543,8 +547,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            log.error("[GITHUB-API] Interrupted while fetching student repo link");
             throw new ExternalPlatformConnectionException("Interrupted while fetching student repo link", e);
         } catch (IOException e) {
+            log.error("[GITHUB-API] IOException while fetching student repo link");
             throw new ExternalPlatformConnectionException("Error fetching student repo link", e);
         }
 
@@ -613,6 +619,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
      */
     public StudentCodeSubmission fetchStudentCode(String repoLink, LoggedInUser currentUser)
             throws ExternalPlatformConnectionException, UserServiceConnectionException {
+        log.info("[GITHUB-API] >>> fetchStudentCode START - repoLink={}, userId={}", repoLink, currentUser.getId());
         try {
             AccessToken tokenResponse = userServiceClient.queryAccessToken(currentUser, NAME);
             String token = tokenResponse.getAccessToken();
@@ -620,10 +627,12 @@ public class GithubClassroom implements CodeAssessmentProvider {
             URI uri = URI.create(repoLink);
             String[] parts = uri.getPath().split("/");
             if (parts.length < 3) {
+                log.error("[GITHUB-API] Invalid repo URL format: {}, parts count: {}", repoLink, parts.length);
                 throw new ExternalPlatformConnectionException("Invalid repo URL: " + repoLink);
             }
             String owner = parts[1];
             String repo = parts[2];
+            log.info("[GITHUB-API] Parsed repository - owner={}, repo={}", owner, repo);
 
             HttpRequest repoRequest = HttpRequest.newBuilder()
                     .uri(URI.create(basePath + "/repos/" + owner + "/" + repo))
@@ -634,7 +643,11 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     .build();
 
             HttpResponse<String> repoResponse = client.send(repoRequest, HttpResponse.BodyHandlers.ofString());
+            log.info("[GITHUB-API] Repository info response status: {}", repoResponse.statusCode());
+            
             if (repoResponse.statusCode() != 200) {
+                log.error("[GITHUB-API] Failed to fetch repository info: status={}, body={}", 
+                        repoResponse.statusCode(), repoResponse.body());
                 throw new ExternalPlatformConnectionException("Failed to fetch repository info: " + repoResponse.body());
             }
 
@@ -650,7 +663,11 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     .build();
 
             HttpResponse<String> commitResponse = client.send(commitRequest, HttpResponse.BodyHandlers.ofString());
+            log.info("[GITHUB-API] Commit info response status: {}", commitResponse.statusCode());
+            
             if (commitResponse.statusCode() != 200) {
+                log.error("[GITHUB-API] Failed to fetch commit info: status={}, body={}", 
+                        commitResponse.statusCode(), commitResponse.body());
                 throw new ExternalPlatformConnectionException("Failed to fetch commit info: " + commitResponse.body());
             }
 
@@ -662,7 +679,9 @@ public class GithubClassroom implements CodeAssessmentProvider {
             OffsetDateTime commitDate = OffsetDateTime.parse(commitDateStr);
 
             Map<String, String> files = new HashMap<>();
+            log.info("[GITHUB-API] Starting recursive file fetch from repository");
             fetchFilesRecursively(owner, repo, defaultBranch, "", token, files);
+            log.info("[GITHUB-API] Finished fetching files - total files retrieved: {}", files.size());
 
             return StudentCodeSubmission.builder()
                     .studentId(currentUser.getId())
@@ -675,9 +694,14 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            log.error("[GITHUB-API] Interrupted while fetching student code from {}", repoLink);
             throw new ExternalPlatformConnectionException("Interrupted while fetching student code", e);
         } catch (IOException e) {
+            log.error("[GITHUB-API] IOException while fetching student code from {}", repoLink);
             throw new ExternalPlatformConnectionException("Error fetching student code", e);
+        } catch (Exception e) {
+            log.error("[GITHUB-API] Unexpected error while fetching student code from {}", repoLink);
+            throw new ExternalPlatformConnectionException("Unexpected error fetching student code: " + e.getMessage());
         }
     }
 
@@ -706,7 +730,8 @@ public class GithubClassroom implements CodeAssessmentProvider {
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() != 200) {
-            log.warn("Failed to fetch contents for path '{}': {}", path, response.body());
+            log.warn("[GITHUB-API] Failed to fetch contents for path '{}': status={}, body={}", 
+                    path, response.statusCode(), response.body());
             return;
         }
 
@@ -729,7 +754,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
                 if (fileResponse.statusCode() == 200) {
                     files.put(itemPath, fileResponse.body());
                 } else {
-                    log.warn("Failed to fetch file content for: {}", itemPath);
+                    log.warn("[GITHUB-API] Failed to fetch file content for: {}, status={}", itemPath, fileResponse.statusCode());
                 }
             } else if ("dir".equals(type)) {
                 fetchFilesRecursively(owner, repo, branch, itemPath, token, files);
