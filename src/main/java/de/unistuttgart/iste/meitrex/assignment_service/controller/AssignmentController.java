@@ -54,6 +54,8 @@ public class AssignmentController {
 
     @QueryMapping
     public List<Grading> getGradingsForAssignment(@Argument final UUID assessmentId, @ContextValue final LoggedInUser currentUser) {
+        log.info("[GRADING-FLOW] GraphQL query received: getGradingsForAssignment for assessmentId={}, userId={}", 
+                assessmentId, currentUser.getId());
         return gradingService.getGradingsForAssignment(assessmentId,  currentUser);
     }
 
