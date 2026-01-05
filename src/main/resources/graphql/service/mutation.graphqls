@@ -41,6 +41,20 @@ type Mutation {
     Fetches assignment info from external code assessment provider for the given course
     """
     syncAssignmentsForCourse(courseId: UUID!): Boolean!
+
+    """
+    Creates a new UML Exercise. Mutation is only accessible internally within the system by other
+    services and the gateway.
+    ⚠️ This mutation is only accessible internally in the system and allows the caller to create assignments without
+    any permissions check and should not be called without any validation of the caller's permissions. ⚠️
+    """
+    _internal_noauth_createUmlExercise(courseId: UUID!, assessmentId: UUID!, input: CreateUmlExerciseInput!): UmlExercise!
+
+    """
+    Modify an UML exercise.
+    🔒 The user must be an admin in the course the assignment is in to perform this action.
+    """
+    mutateUmlExercise(assessmentId: UUID!): UmlExerciseMutation!
 }
 
 type AssignmentMutation {
@@ -78,6 +92,20 @@ type AssignmentMutation {
     Deletes the subexercise with the specified ID. Throws an error if the subexercise does not exist.
     """
     deleteSubexercise(itemId: UUID!): UUID!
+}
+
+type UmlExerciseMutation {
+    """
+    ID of the UmlExercise that is being modified.
+    """
+    assessmentId: UUID!
+
+    """
+    Creates a new UML exercise. Throws an error if the assignment does not exist.
+    """
+    updateTutorSolution(tutorSolution: String!): UmlExercise!
+
+    submitStudentSolution(studentId: UUID!, diagram: String!): UmlStudentSolution
 }
 
 input CreateAssignmentInput {

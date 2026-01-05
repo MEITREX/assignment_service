@@ -1,0 +1,50 @@
+package de.unistuttgart.iste.meitrex.assignment_service.controller;
+
+import de.unistuttgart.iste.meitrex.assignment_service.service.UmlExerciseService;
+import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
+import de.unistuttgart.iste.meitrex.generated.dto.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.graphql.data.method.annotation.*;
+import org.springframework.stereotype.Controller;
+
+import java.util.UUID;
+
+@Slf4j
+@Controller
+@RequiredArgsConstructor
+public class UmlExerciseController {
+
+    private final UmlExerciseService umlExerciseService;
+
+    @MutationMapping(name = "_internal_noauth_createUmlExercise")
+    public UmlExercise createUmlExercise(@Argument final UUID courseId,
+                                         @Argument final UUID assessmentId,
+                                         @Argument final CreateUmlExerciseInput input) {
+        return umlExerciseService.createExercise(courseId, assessmentId, input);
+    }
+
+    @MutationMapping
+    public UmlExerciseMutation mutateUmlExercise(@Argument final UUID assessmentId,
+                                                 @ContextValue final LoggedInUser currentUser) {
+        return umlExerciseService.mutateUmlExercise(assessmentId, currentUser);
+    }
+
+    @SchemaMapping(typeName = "UmlExerciseMutation")
+    public UmlExercise updateTutorSolution(final UmlExerciseMutation mutation,
+                                           @Argument final String tutorSolution) {
+        return umlExerciseService.updateTutorSolution(mutation.getAssessmentId(), tutorSolution);
+    }
+
+    @SchemaMapping(typeName = "UmlExerciseMutation")
+    public UmlStudentSolution submitStudentSolution(final UmlExerciseMutation mutation,
+                                                    @Argument final UUID studentId,
+                                                    @Argument final String diagram) {
+        return umlExerciseService.submitSolution(mutation.getAssessmentId(), studentId, diagram);
+    }
+
+    @QueryMapping
+    public UmlExercise getUmlExerciseByAssessmentId(@Argument UUID assessmentId) {
+        return umlExerciseService.getExerciseByAssessmentId(assessmentId);
+    }
+}

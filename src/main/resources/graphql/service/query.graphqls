@@ -41,6 +41,11 @@ type Query {
     🔒 The user must be an admin in the course. Otherwise null is returned.
     """
     getManualMappingInstances(courseId: UUID!): [ManualMappingInstance]!
+
+    """
+    Returns the UML exercise for the given assessment ID.
+    """
+    getUmlExerciseByAssessmentId(assessmentId: UUID!): UmlExercise!
 }
 
 type ExternalCourse {
