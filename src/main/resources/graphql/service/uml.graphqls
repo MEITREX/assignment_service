@@ -1,0 +1,64 @@
+type UmlExercise {
+    id: UUID!
+    """
+    Identifier of the assignment, same as the identifier of the assessment.
+    """
+    assessmentId: UUID!
+    """
+    Id of the course this assignment belongs to.
+    """
+    courseId: UUID!
+    """
+    Description of the task of the UML assignment
+    """
+    description: String!
+    """
+    Whether the solution can be shown to the student if they submitted at least one solution
+    """
+    showSolution: Boolean!
+    """
+    HyLiMo code for the 'optimal' solution, created by the tutor.
+    This gets used to evaluate against the submission of a student to create feedback
+    """
+    tutorSolution: String!
+    """
+    The total amount of points that can be achieved
+    """
+    totalPoints: Int!
+    """
+    The required percentage to pass the assignment. A value between 0 and 1. Defaults to 0.5
+    """
+    requiredPercentage: Float
+    """
+    Student submissions
+    """
+    studentSubmissions: [UmlStudentSubmission!]!
+}
+
+type UmlStudentSubmission {
+    id: UUID!
+    studentId: UUID!
+    solutions: [UmlStudentSolution!]!
+}
+
+type UmlStudentSolution {
+    id: UUID!
+    submittedAt: DateTime!
+    diagram: String!
+    feedback: UmlFeedback
+}
+
+type UmlFeedback {
+    id: UUID!
+    comment: String!
+    points: Int!
+}
+
+input CreateUmlExerciseInput {
+    description: String!
+    showSolution: Boolean! = false
+    totalPoints: Int! @Positive
+    requiredPercentage: Float! = 0.5 @Range(min : 0, max : 1)
+    courseId: UUID!
+    tutorSolution: String
+}
