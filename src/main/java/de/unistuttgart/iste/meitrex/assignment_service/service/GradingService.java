@@ -192,11 +192,33 @@ public class GradingService {
     }
 
 
+    /**
+     * Returns the grading for the current user on the given code assignment.
+     */
     private List<Grading> getCodeAssignmentGradingForStudent(final AssignmentEntity assignment, final LoggedInUser currentUser) {
         log.info("[GRADING-FLOW] >>> getCodeAssignmentGradingForStudent START - assignmentId={}, studentId={}", 
                 assignment.getId(), currentUser.getId());
         
-        final GradingEntity.PrimaryKey pk = new GradingEntity.PrimaryKey(assignment.getId(), currentUser.getId());
+        GradingEntity gradingEntity = ensureGradingEntityExists(assignment.getId(), currentUser.getId());
+        
+        findAndSetRepositoryLinkIfMissing(gradingEntity, assignment, currentUser);
+        
+        if (hasRepositoryLink(gradingEntity)) {
+            syncAndUpdateGrading(gradingEntity, assignment, currentUser);
+        }
+
+        log.info("[GRADING-FLOW] Saving grading entity to database");
+        gradingEntity = gradingRepository.save(gradingEntity);
+        log.info("[GRADING-FLOW] <<< getCodeAssignmentGradingForStudent END - returning grading");
+        return List.of(assignmentMapper.gradingEntityToDto(gradingEntity));
+    }
+
+    /**
+     * Ensures a grading entity exists for the given assignment and student.
+     * Creates a new entity with metadata if it doesn't exist.
+     */
+    private GradingEntity ensureGradingEntityExists(final UUID assignmentId, final UUID studentId) {
+        final GradingEntity.PrimaryKey pk = new GradingEntity.PrimaryKey(assignmentId, studentId);
         GradingEntity gradingEntity = gradingRepository.findById(pk).orElse(null);
         
         if (gradingEntity == null) {
@@ -213,91 +235,169 @@ public class GradingService {
             gradingEntity.setCodeAssignmentGradingMetadata(metadata);
         }
 
-        if (gradingEntity.getCodeAssignmentGradingMetadata() == null ||
-                gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink() == null) {
-            log.info("[GRADING-FLOW] Repository link not found, attempting to find student repository");
-            try {
-                String assignmentName = contentServiceClient.queryContentsOfCourse(currentUser.getId(), assignment.getCourseId()).stream()
-                        .filter(assignmentDto -> assignmentDto.getId().equals(assignment.getId()))
-                        .findFirst()
-                        .orElseThrow(() -> new EntityNotFoundException("Assignment with externalId %s not found".formatted(assignment.getExternalId())))
-                        .getMetadata().getName();
+        return gradingEntity;
+    }
 
-                String courseTitle = courseServiceClient.queryCourseById(assignment.getCourseId()).getTitle();               
-                // no isPresent check, since if we are here, the external course must exist
-                String organizationName = externalCourseRepository.findById(courseTitle).get().getOrganizationName();
+    /**
+     * Checks if the grading entity has a repository link set.
+     */
+    private boolean hasRepositoryLink(final GradingEntity gradingEntity) {
+        return gradingEntity.getCodeAssignmentGradingMetadata() != null &&
+               gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink() != null;
+    }
 
-                log.info("[GRADING-FLOW] Calling findRepository with assignmentName={}, organizationName={}", 
-                        assignmentName, organizationName);
-                String repoLink = codeAssessmentProvider.findRepository(assignmentName, organizationName, currentUser);
-                log.info("[GRADING-FLOW] Repository link found: {}", repoLink != null ? repoLink : "NULL");
-                gradingEntity.getCodeAssignmentGradingMetadata().setRepoLink(repoLink);
-            } catch (ExternalPlatformConnectionException | UserServiceConnectionException |
-                     ContentServiceConnectionException | CourseServiceConnectionException e) {
-                log.error("[GRADING-FLOW] ERROR: Failed to find repository for assignment {} and student {}: {}", assignment.getId(), currentUser.getId(), e.toString());
-            }
+    /**
+     * Finds and sets the repository link for the student if it's missing.
+     */
+    private void findAndSetRepositoryLinkIfMissing(final GradingEntity gradingEntity, 
+                                                    final AssignmentEntity assignment, 
+                                                    final LoggedInUser currentUser) {
+        if (hasRepositoryLink(gradingEntity)) {
+            return;
         }
 
-        if (gradingEntity.getCodeAssignmentGradingMetadata() != null &&
-                gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink() != null) {
-            log.info("[GRADING-FLOW] Repository link exists: {}", 
-                    gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink());
-            ExternalGrading externalGrading;
-            try {
-                externalGrading = codeAssessmentProvider.syncGradeForStudent(gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink(), currentUser);
-                log.info("[GRADING-FLOW] syncGradeForStudent completed - achievedPoints={}, totalPoints={}, status={}", 
-                        externalGrading.achievedPoints(), externalGrading.totalPoints(), externalGrading.status());
-            } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
-                log.error("[GRADING-FLOW] ERROR: Failed to sync student grade for assignment {} and student {}: {}", assignment.getId(), currentUser.getId(), e.toString());
-                gradingEntity = gradingRepository.save(gradingEntity);
-                return List.of(assignmentMapper.gradingEntityToDto(gradingEntity));
-            }
+        log.info("[GRADING-FLOW] Repository link not found, attempting to find student repository");
+        try {
+            String assignmentName = contentServiceClient.queryContentsOfCourse(currentUser.getId(), assignment.getCourseId()).stream()
+                    .filter(assignmentDto -> assignmentDto.getId().equals(assignment.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new EntityNotFoundException("Assignment with externalId %s not found".formatted(assignment.getExternalId())))
+                    .getMetadata().getName();
 
-            if (externalGrading.achievedPoints() != null){
-                gradingEntity.setAchievedCredits(externalGrading.achievedPoints());
-            }
-            gradingEntity.setDate(externalGrading.date());
+            String courseTitle = courseServiceClient.queryCourseById(assignment.getCourseId()).getTitle();
+            String organizationName = externalCourseRepository.findById(courseTitle).get().getOrganizationName();
 
-            CodeAssignmentGradingMetadataEntity metadata = gradingEntity.getCodeAssignmentGradingMetadata();
-            metadata.setStatus(externalGrading.status());
-            metadata.setFeedbackTableHtml(externalGrading.tableHtml());
+            log.info("[GRADING-FLOW] Calling findRepository with assignmentName={}, organizationName={}", 
+                    assignmentName, organizationName);
+            String repoLink = codeAssessmentProvider.findRepository(assignmentName, organizationName, currentUser);
+            log.info("[GRADING-FLOW] Repository link found: {}", repoLink != null ? repoLink : "NULL");
+            gradingEntity.getCodeAssignmentGradingMetadata().setRepoLink(repoLink);
+        } catch (ExternalPlatformConnectionException | UserServiceConnectionException |
+                 ContentServiceConnectionException | CourseServiceConnectionException e) {
+            log.error("[GRADING-FLOW] ERROR: Failed to find repository for assignment {} and student {}: {}", 
+                    assignment.getId(), currentUser.getId(), e.toString());
+        }
+    }
 
-            if (assignment.getTotalCredits() == null || (externalGrading.totalPoints() != null && externalGrading.totalPoints() > assignment.getTotalCredits())) {
-                assignment.setTotalCredits(externalGrading.totalPoints());
-            }
-            
-            log.info("[GRADING-FLOW] Attempting to fetch student code from repository");
-            try {
-                if (codeAssessmentProvider instanceof de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.GithubClassroom githubClassroom) {
-                    log.info("[GRADING-FLOW] Calling fetchStudentCode for repoLink={}", 
-                            gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink());
-                    
-                    de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.StudentCodeSubmission codeSubmission = 
-                        githubClassroom.fetchStudentCode(gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink(), currentUser);
-                    
-                    log.info("[GRADING-FLOW] fetchStudentCode completed successfully - files count: {}, commit: {}", 
-                            codeSubmission.getFiles().size(), codeSubmission.getCommitSha());
-                    
-                    codeSubmission.setAssignmentId(assignment.getId());
-                    codeSubmission.setCourseId(assignment.getCourseId());
-                    
-                    log.info("[GRADING-FLOW] Publishing StudentCodeSubmittedEvent");
-                    publishStudentCodeSubmittedEvent(codeSubmission);
-                    log.info("[GRADING-FLOW] StudentCodeSubmittedEvent published successfully");
-                } else {
-                    log.warn("[GRADING-FLOW] Code assessment provider is not GithubClassroom instance: {}", 
-                            codeAssessmentProvider.getClass().getName());
-                }
-            } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
-                log.error("[GRADING-FLOW] ERROR: Failed to fetch student code for assignment {} and student {}: {}", 
-                        assignment.getId(), currentUser.getId(), e.toString(), e);
-            }
+    /**
+     * Syncs grading from external system, updates the grading entity, and handles code submission events.
+     */
+    private void syncAndUpdateGrading(final GradingEntity gradingEntity, 
+                                       final AssignmentEntity assignment, 
+                                       final LoggedInUser currentUser) {
+        log.info("[GRADING-FLOW] Repository link exists: {}", 
+                gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink());
+        ExternalGrading externalGrading;
+        try {
+            externalGrading = codeAssessmentProvider.syncGradeForStudent(
+                    gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink(), currentUser);
+            log.info("[GRADING-FLOW] syncGradeForStudent completed - achievedPoints={}, totalPoints={}, status={}", 
+                    externalGrading.achievedPoints(), externalGrading.totalPoints(), externalGrading.status());
+        } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
+            log.error("[GRADING-FLOW] ERROR: Failed to sync student grade for assignment {} and student {}: {}", 
+                    assignment.getId(), currentUser.getId(), e.toString());
+            return;
         }
 
-        log.info("[GRADING-FLOW] Saving grading entity to database");
-        gradingEntity = gradingRepository.save(gradingEntity);
-        log.info("[GRADING-FLOW] <<< getCodeAssignmentGradingForStudent END - returning grading");
-        return List.of(assignmentMapper.gradingEntityToDto(gradingEntity));
+        updateGradingFromExternalGrading(gradingEntity, externalGrading, assignment);
+        handleCodeSubmissionEvent(gradingEntity, externalGrading, assignment, currentUser);
+    }
+
+    /**
+     * Updates the grading entity with data from external grading.
+     */
+    private void updateGradingFromExternalGrading(final GradingEntity gradingEntity, 
+                                                   final ExternalGrading externalGrading,
+                                                   final AssignmentEntity assignment) {
+        if (externalGrading.achievedPoints() != null) {
+            gradingEntity.setAchievedCredits(externalGrading.achievedPoints());
+        }
+        gradingEntity.setDate(externalGrading.date());
+
+        CodeAssignmentGradingMetadataEntity metadata = gradingEntity.getCodeAssignmentGradingMetadata();
+        metadata.setStatus(externalGrading.status());
+        metadata.setFeedbackTableHtml(externalGrading.tableHtml());
+
+        if (assignment.getTotalCredits() == null || 
+            (externalGrading.totalPoints() != null && externalGrading.totalPoints() > assignment.getTotalCredits())) {
+            assignment.setTotalCredits(externalGrading.totalPoints());
+        }
+    }
+
+    /**
+     * Handles code submission event publishing with commit-based deduplication.
+     */
+    private void handleCodeSubmissionEvent(final GradingEntity gradingEntity,
+                                            final ExternalGrading externalGrading,
+                                            final AssignmentEntity assignment,
+                                            final LoggedInUser currentUser) {
+        CodeAssignmentGradingMetadataEntity metadata = gradingEntity.getCodeAssignmentGradingMetadata();
+        String lastProcessedCommit = metadata.getLastProcessedCommitSha();
+        String currentCommit = externalGrading.commitSha();
+
+        if (!shouldSendCodeSubmissionEvent(lastProcessedCommit, currentCommit, assignment.getId(), currentUser.getId())) {
+            return;
+        }
+
+        log.info("[GRADING-FLOW] Attempting to fetch student code from repository");
+        try {
+            if (codeAssessmentProvider instanceof de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.GithubClassroom githubClassroom) {
+                log.info("[GRADING-FLOW] Calling fetchStudentCode for repoLink={}", 
+                        metadata.getRepoLink());
+                
+                de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.StudentCodeSubmission codeSubmission = 
+                    githubClassroom.fetchStudentCode(metadata.getRepoLink(), currentUser);
+                
+                log.info("[GRADING-FLOW] fetchStudentCode completed successfully - files count: {}, commit: {}", 
+                        codeSubmission.getFiles().size(), codeSubmission.getCommitSha());
+                
+                codeSubmission.setAssignmentId(assignment.getId());
+                codeSubmission.setCourseId(assignment.getCourseId());
+                
+                log.info("[GRADING-FLOW] Publishing StudentCodeSubmittedEvent");
+                publishStudentCodeSubmittedEvent(codeSubmission);
+                log.info("[GRADING-FLOW] StudentCodeSubmittedEvent published successfully");
+                
+                metadata.setLastProcessedCommitSha(currentCommit != null ? currentCommit : "NO_COMMIT_SHA_PROCESSED");
+            } else {
+                log.warn("[GRADING-FLOW] Code assessment provider is not GithubClassroom instance: {}", 
+                        codeAssessmentProvider.getClass().getName());
+            }
+        } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
+            log.error("[GRADING-FLOW] ERROR: Failed to fetch student code for assignment {} and student {}: {}", 
+                    assignment.getId(), currentUser.getId(), e.toString());
+        }
+    }
+
+    /**
+     * Determines whether a code submission event should be sent based on commit SHA comparison.
+     */
+    private boolean shouldSendCodeSubmissionEvent(final String lastProcessedCommit, 
+                                                   final String currentCommit,
+                                                   final UUID assignmentId,
+                                                   final UUID studentId) {
+        if (currentCommit != null) {
+            if (lastProcessedCommit == null || lastProcessedCommit.equals("NO_COMMIT_SHA_PROCESSED")) {
+                return true;
+            } else if (!currentCommit.equals(lastProcessedCommit)) {
+                return true;
+            } else {
+                log.debug("Skipping code submission event. Commit {} already processed for student {} on assignment {}", 
+                        currentCommit, studentId, assignmentId);
+                return false;
+            }
+        } else {
+            if (lastProcessedCommit == null || lastProcessedCommit.equals("NO_COMMIT_SHA_PROCESSED")) {
+                log.warn("No commit SHA available for assignment {} and student {}, sending event without commit tracking", 
+                        assignmentId, studentId);
+                return true;
+            } else {
+                log.debug("No commit SHA and event already sent once for student {} on assignment {}, skipping", 
+                        studentId, assignmentId);
+                return false;
+            }
+        }
+    }
     }
 
     /**
@@ -555,6 +655,7 @@ public class GradingService {
                 .contentId(assignmentEntity.getAssessmentId())
                 .hintsUsed(0)
                 .success(success)
+                .contentType(ContentProgressedEvent.ContentType.ASSIGNMENT)
                 .timeToComplete(null)
                 .correctness(correctness)
                 .responses(responses)

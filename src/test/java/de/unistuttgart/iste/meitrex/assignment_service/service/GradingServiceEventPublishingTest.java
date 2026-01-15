@@ -42,11 +42,9 @@ class GradingServiceEventPublishingTest {
 
     @Test
     void testPublishStudentCodeSubmittedEvent_Success() throws Exception {
-        // Arrange
         String repoUrl = "https://github.com/org/repo-student";
         StudentCodeSubmission codeSubmission = createMockCodeSubmission(repoUrl);
 
-        // Create the event that would be published
         StudentCodeSubmittedEvent event = StudentCodeSubmittedEvent.builder()
                 .studentId(codeSubmission.getStudentId())
                 .assignmentId(codeSubmission.getAssignmentId())
@@ -58,10 +56,8 @@ class GradingServiceEventPublishingTest {
                 .branch(codeSubmission.getBranch())
                 .build();
 
-        // Act
         topicPublisher.notifyStudentCodeSubmitted(event);
 
-        // Assert
         ArgumentCaptor<StudentCodeSubmittedEvent> eventCaptor = 
                 ArgumentCaptor.forClass(StudentCodeSubmittedEvent.class);
         verify(topicPublisher, times(1)).notifyStudentCodeSubmitted(eventCaptor.capture());
@@ -80,7 +76,6 @@ class GradingServiceEventPublishingTest {
 
     @Test
     void testCodeSubmissionEventContent_AllFieldsPresent() {
-        // Arrange
         String repoUrl = "https://github.com/test/repo";
         String commitSha = "abc123def456";
         OffsetDateTime commitTime = OffsetDateTime.now();
@@ -89,7 +84,6 @@ class GradingServiceEventPublishingTest {
         Map<String, String> files = new HashMap<>();
         files.put("Test.java", "public class Test {}");
 
-        // Act
         StudentCodeSubmittedEvent event = StudentCodeSubmittedEvent.builder()
                 .studentId(studentId)
                 .assignmentId(assignmentId)
@@ -101,7 +95,6 @@ class GradingServiceEventPublishingTest {
                 .branch(branch)
                 .build();
 
-        // Assert
         assertEquals(studentId, event.getStudentId());
         assertEquals(assignmentId, event.getAssignmentId());
         assertEquals(courseId, event.getCourseId());
@@ -114,7 +107,6 @@ class GradingServiceEventPublishingTest {
 
     @Test
     void testCodeSubmission_MultipleFiles() {
-        // Arrange
         StudentCodeSubmission codeSubmission = StudentCodeSubmission.builder()
                 .studentId(studentId)
                 .assignmentId(assignmentId)
@@ -126,7 +118,6 @@ class GradingServiceEventPublishingTest {
                 .files(createMultipleFiles())
                 .build();
 
-        // Act
         StudentCodeSubmittedEvent event = StudentCodeSubmittedEvent.builder()
                 .studentId(codeSubmission.getStudentId())
                 .assignmentId(codeSubmission.getAssignmentId())
@@ -138,7 +129,6 @@ class GradingServiceEventPublishingTest {
                 .branch(codeSubmission.getBranch())
                 .build();
 
-        // Assert
         assertNotNull(event.getFiles());
         assertEquals(5, event.getFiles().size());
         assertTrue(event.getFiles().containsKey("src/Main.java"));
@@ -150,7 +140,6 @@ class GradingServiceEventPublishingTest {
 
     @Test
     void testCodeSubmission_EmptyFiles() {
-        // Arrange
         StudentCodeSubmission codeSubmission = StudentCodeSubmission.builder()
                 .studentId(studentId)
                 .assignmentId(assignmentId)
@@ -162,7 +151,6 @@ class GradingServiceEventPublishingTest {
                 .files(new HashMap<>())
                 .build();
 
-        // Act
         StudentCodeSubmittedEvent event = StudentCodeSubmittedEvent.builder()
                 .studentId(codeSubmission.getStudentId())
                 .assignmentId(codeSubmission.getAssignmentId())
@@ -174,14 +162,12 @@ class GradingServiceEventPublishingTest {
                 .branch(codeSubmission.getBranch())
                 .build();
 
-        // Assert
         assertNotNull(event.getFiles());
         assertTrue(event.getFiles().isEmpty());
     }
 
     @Test
     void testCodeSubmission_VerifyMetadata() {
-        // Arrange
         String repoUrl = "https://github.com/student/assignment-repo";
         String commitSha = "1234567890abcdef";
         OffsetDateTime timestamp = OffsetDateTime.parse("2025-12-15T10:30:00Z");
@@ -198,7 +184,6 @@ class GradingServiceEventPublishingTest {
                 .files(Map.of("Main.java", "code"))
                 .build();
 
-        // Assert
         assertEquals(repoUrl, submission.getRepositoryUrl());
         assertEquals(commitSha, submission.getCommitSha());
         assertEquals(timestamp, submission.getCommitTimestamp());
