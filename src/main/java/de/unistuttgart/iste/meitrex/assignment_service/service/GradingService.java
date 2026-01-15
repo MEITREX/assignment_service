@@ -188,6 +188,9 @@ public class GradingService {
     }
 
 
+    /**
+     * Returns the grading for the current user on the given code assignment.
+     */
     private List<Grading> getCodeAssignmentGradingForStudent(final AssignmentEntity assignment, final LoggedInUser currentUser) {
         GradingEntity gradingEntity = ensureGradingEntityExists(assignment.getId(), currentUser.getId());
         
@@ -621,6 +624,7 @@ public class GradingService {
                 .contentId(assignmentEntity.getAssessmentId())
                 .hintsUsed(0)
                 .success(success)
+                .contentType(ContentProgressedEvent.ContentType.ASSIGNMENT)
                 .timeToComplete(null)
                 .correctness(correctness)
                 .responses(responses)

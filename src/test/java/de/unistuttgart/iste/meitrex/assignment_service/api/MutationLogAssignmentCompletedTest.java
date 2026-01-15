@@ -125,6 +125,7 @@ class MutationLogAssignmentCompletedTest {
                 .correctness(35.0/50.0)
                 .hintsUsed(0)
                 .success(true)
+                .contentType(ContentProgressedEvent.ContentType.ASSIGNMENT)
                 .responses(responses)
                 .build();
 
@@ -207,6 +208,7 @@ class MutationLogAssignmentCompletedTest {
                 .correctness(15.0/50.0)
                 .hintsUsed(0)
                 .success(false)
+                .contentType(ContentProgressedEvent.ContentType.ASSIGNMENT)
                 .responses(responses)
                 .build();
 
@@ -294,6 +296,7 @@ class MutationLogAssignmentCompletedTest {
                 .correctness(35.0/50.0)
                 .hintsUsed(0)
                 .success(false)
+                .contentType(ContentProgressedEvent.ContentType.ASSIGNMENT)
                 .responses(responses)
                 .build();
 
@@ -382,6 +385,7 @@ class MutationLogAssignmentCompletedTest {
                 .correctness(1.0f)
                 .hintsUsed(0)
                 .success(true)
+                .contentType(ContentProgressedEvent.ContentType.ASSIGNMENT)
                 .responses(responses)
                 .build();
 
