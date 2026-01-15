@@ -37,4 +37,7 @@ public class CodeAssignmentGradingMetadataEntity {
 
     @Column(nullable = true, columnDefinition = "TEXT")
     private String feedbackTableHtml;
+
+    @Column(nullable = true)
+    private String lastProcessedCommitSha;
 }

@@ -250,20 +250,47 @@ public class GradingService {
                 assignment.setTotalCredits(externalGrading.totalPoints());
             }
             
-            try {
-                if (codeAssessmentProvider instanceof de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.GithubClassroom githubClassroom) {
-                    de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.StudentCodeSubmission codeSubmission = 
-                        githubClassroom.fetchStudentCode(gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink(), currentUser);
-                    
-                    
-                    codeSubmission.setAssignmentId(assignment.getId());
-                    codeSubmission.setCourseId(assignment.getCourseId());
-                    
-                    publishStudentCodeSubmittedEvent(codeSubmission);
+            String lastProcessedCommit = metadata.getLastProcessedCommitSha();
+            String currentCommit = externalGrading.commitSha();
+            boolean shouldSendEvent = false;
+
+            if (currentCommit != null) {
+                if (lastProcessedCommit == null || lastProcessedCommit.equals("NO_COMMIT_SHA_PROCESSED")) {
+                    shouldSendEvent = true;
+                } else if (!currentCommit.equals(lastProcessedCommit)) {
+                    shouldSendEvent = true;
+                } else {
+                    log.debug("Skipping code submission event. Commit {} already processed for student {} on assignment {}", 
+                            currentCommit, currentUser.getId(), assignment.getId());
                 }
-            } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
-                log.error("Failed to fetch student code for assignment {} and student {}: {}", 
-                        assignment.getId(), currentUser.getId(), e.toString());
+            } else {
+                if (lastProcessedCommit == null || lastProcessedCommit.equals("NO_COMMIT_SHA_PROCESSED")) {
+                    shouldSendEvent = true;
+                    log.warn("No commit SHA available for assignment {} and student {}, sending event without commit tracking", 
+                            assignment.getId(), currentUser.getId());
+                } else {
+                    log.debug("No commit SHA and event already sent once for student {} on assignment {}, skipping", 
+                            currentUser.getId(), assignment.getId());
+                }
+            }
+            
+            if (shouldSendEvent) {
+                try {
+                    if (codeAssessmentProvider instanceof de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.GithubClassroom githubClassroom) {
+                        de.unistuttgart.iste.meitrex.assignment_service.service.code_assignment.StudentCodeSubmission codeSubmission = 
+                            githubClassroom.fetchStudentCode(gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink(), currentUser);
+                        
+                        codeSubmission.setAssignmentId(assignment.getId());
+                        codeSubmission.setCourseId(assignment.getCourseId());
+                        
+                        publishStudentCodeSubmittedEvent(codeSubmission);
+                        
+                        metadata.setLastProcessedCommitSha(currentCommit != null ? currentCommit : "NO_COMMIT_SHA_PROCESSED");
+                    }
+                } catch (ExternalPlatformConnectionException | UserServiceConnectionException e) {
+                    log.error("Failed to fetch student code for assignment {} and student {}: {}", 
+                            assignment.getId(), currentUser.getId(), e.toString());
+                }
             }
         }
 

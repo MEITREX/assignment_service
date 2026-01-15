@@ -280,7 +280,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
                     }
                 }
 
-                gradings.add(new ExternalGrading(username, null, submissionDate, null, achieved, total));
+                gradings.add(new ExternalGrading(username, null, submissionDate, null, achieved, total, null));
             }
 
             return gradings;
@@ -333,9 +333,10 @@ public class GithubClassroom implements CodeAssessmentProvider {
             String status = run.get("status").getAsString();
             String logsUrl = run.get("logs_url").getAsString();
             String lastlyTested = run.get("updated_at").getAsString();
+            String commitSha = run.has("head_sha") ? run.get("head_sha").getAsString() : null;
 
             if (!status.equals("completed")){
-                return new ExternalGrading(null, status, OffsetDateTime.parse(lastlyTested), null, null, null);
+                return new ExternalGrading(null, status, OffsetDateTime.parse(lastlyTested), null, null, null, commitSha);
             }
 
             // Download logs
@@ -377,7 +378,7 @@ public class GithubClassroom implements CodeAssessmentProvider {
                         double totalPoints = Double.parseDouble(matcher.group(1));
                         double maxPoints = Double.parseDouble(matcher.group(2));
                         String tableHtml = extractGradingTableAsHtml(logs);
-                        return new ExternalGrading(null, status, OffsetDateTime.parse(lastlyTested), tableHtml, totalPoints, maxPoints);
+                        return new ExternalGrading(null, status, OffsetDateTime.parse(lastlyTested), tableHtml, totalPoints, maxPoints, commitSha);
                     } else {
                         throw new ExternalPlatformConnectionException("Could not find totalPoints/maxPoints in logs.");
                     }

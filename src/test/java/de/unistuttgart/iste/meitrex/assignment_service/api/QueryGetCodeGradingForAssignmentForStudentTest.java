@@ -116,7 +116,7 @@ class QueryGetCodeGradingForAssignmentForStudentTest {
         );
 
         ExternalGrading externalGrading = new ExternalGrading("ext-user", gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink(), OffsetDateTime.now(),
-                "<table>feedback</table>", 42.0, 60.0);
+                "<table>feedback</table>", 42.0, 60.0, "test-commit-sha");
 
         when(codeAssessmentProvider.findRepository(eq(assignment.getExternalId()), any(), any())).thenReturn(gradingEntity.getCodeAssignmentGradingMetadata().getRepoLink());
 
@@ -227,7 +227,8 @@ class QueryGetCodeGradingForAssignmentForStudentTest {
                 OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS),
                 "<table>feedback</table>",
                 35.0,
-                50.0
+                50.0,
+                "test-commit-sha-2"
         );
         when(codeAssessmentProvider.syncGradeForStudent(eq("https://github.com/user/repo"), any()))
                 .thenReturn(externalGrading);
