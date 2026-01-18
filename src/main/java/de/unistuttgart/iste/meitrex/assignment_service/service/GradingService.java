@@ -398,7 +398,6 @@ public class GradingService {
             }
         }
     }
-    }
 
     /**
      * Returns gradings for the current user on the given assignment.
