@@ -33,6 +33,16 @@ type UmlExercise {
     Student submissions
     """
     studentSubmissions: [UmlStudentSubmission!]!
+
+    """
+    Returns the latest solution attempt for a specific student.
+    """
+    latestSolution(studentId: UUID!): UmlStudentSolution
+
+    """
+    Returns all solution attempts for a specific student, sorted by submission date.
+    """
+    solutionsByStudent(studentId: UUID!): [UmlStudentSolution!]!
 }
 
 type UmlStudentSubmission {
