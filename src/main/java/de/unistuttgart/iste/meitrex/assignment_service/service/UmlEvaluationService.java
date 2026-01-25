@@ -47,4 +47,17 @@ public class UmlEvaluationService {
             log.error("Error during async feedback generation", e);
         }
     }
+
+    @Transactional
+    public void generateFeedback(final UmlStudentSolutionEntity solution, final String semanticModel) {
+        String feedbackText = "Manual Test feedback text";
+
+        UmlFeedbackEntity feedback = UmlFeedbackEntity.builder()
+            .solution(solution)
+            .comment(feedbackText)
+            .points(8)
+            .build();
+
+        solution.setFeedback(feedback);
+    }
 }
