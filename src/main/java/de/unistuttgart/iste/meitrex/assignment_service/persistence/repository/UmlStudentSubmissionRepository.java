@@ -14,8 +14,8 @@ public interface UmlStudentSubmissionRepository extends MeitrexRepository<UmlStu
 
     @Query("SELECT s FROM UmlStudentSubmission s " +
             "LEFT JOIN FETCH s.solutions " +
-            "WHERE s.studentId = :studentId AND s.exercise.assessmentId = :assessmentId")
+            "WHERE s.studentId = :studentId AND s.exercise.id = :exerciseId")
     Optional<UmlStudentSubmissionEntity> findByStudentAndAssessmentWithSolutions(
             @Param("studentId") UUID studentId,
-            @Param("assessmentId") UUID assessmentId);
+            @Param("exerciseId") UUID exerciseId);
 }
