@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.*;
 import org.springframework.stereotype.Controller;
 
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -46,5 +47,25 @@ public class UmlExerciseController {
     @QueryMapping
     public UmlExercise getUmlExerciseByAssessmentId(@Argument UUID assessmentId) {
         return umlExerciseService.getExerciseByAssessmentId(assessmentId);
+    }
+
+    @SchemaMapping(typeName = "UmlExercise")
+    public List<UmlStudentSolution> solutionsByStudent(UmlExercise exercise, @Argument UUID studentId) {
+        return umlExerciseService.getSolutionsByStudent(exercise, studentId);
+    }
+
+    @SchemaMapping(typeName = "UmlExercise")
+    public UmlStudentSolution latestSolution(UmlExercise exercise, @Argument UUID studentId) {
+        return umlExerciseService.getSolutionsByStudent(exercise, studentId).stream()
+            .findFirst()
+            .orElse(null);
+    }
+
+    @MutationMapping
+    public UmlStudentSolution evaluateLatestSolution(
+            @Argument UUID assessmentId,
+            @Argument UUID studentId,
+            @Argument String semanticModel) {
+        return umlExerciseService.evaluateLatestSolution(assessmentId, studentId, semanticModel);
     }
 }
