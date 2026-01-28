@@ -108,7 +108,7 @@ type UmlExerciseMutation {
     """
     Creates a new solution attempt for a student.
     """
-    createUmlSolution(assessmentId: UUID!, studentId: UUID!, createFromPrevious: Boolean!): UmlStudentSolution!
+    createUmlSolution(studentId: UUID!, createFromPrevious: Boolean!): UmlStudentSolution!
 
     """
     Saves progress or finalizes a student's solution depending on the submit flag.

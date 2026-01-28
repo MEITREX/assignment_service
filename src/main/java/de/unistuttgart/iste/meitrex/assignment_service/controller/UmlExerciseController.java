@@ -38,11 +38,11 @@ public class UmlExerciseController {
     }
 
     @SchemaMapping(typeName = "UmlExerciseMutation")
-    public UmlStudentSolution createUmlSolution(@Argument UUID assessmentId,
+    public UmlStudentSolution createUmlSolution(final UmlExerciseMutation mutation,
                                                 @Argument UUID studentId,
                                                 @Argument boolean createFromPrevious) {
-        log.info("Mutation: createUmlSolution for assessmentId={}, studentId={}", assessmentId, studentId);
-        return umlExerciseService.createNewSolution(assessmentId, studentId, createFromPrevious);
+        log.info("Mutation: createUmlSolution for assessmentId={}, studentId={}", mutation.getAssessmentId(), studentId);
+        return umlExerciseService.createNewSolution(mutation.getAssessmentId(), studentId, createFromPrevious);
     }
 
     @SchemaMapping(typeName = "UmlExerciseMutation")
