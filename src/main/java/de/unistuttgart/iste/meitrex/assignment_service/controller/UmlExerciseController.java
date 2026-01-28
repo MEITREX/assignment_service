@@ -38,10 +38,21 @@ public class UmlExerciseController {
     }
 
     @SchemaMapping(typeName = "UmlExerciseMutation")
-    public UmlStudentSolution submitStudentSolution(final UmlExerciseMutation mutation,
+    public UmlStudentSolution createUmlSolution(@Argument UUID assessmentId,
+                                                @Argument UUID studentId,
+                                                @Argument boolean createFromPrevious) {
+        log.info("Mutation: createUmlSolution for assessmentId={}, studentId={}", assessmentId, studentId);
+        return umlExerciseService.createNewSolution(assessmentId, studentId, createFromPrevious);
+    }
+
+    @SchemaMapping(typeName = "UmlExerciseMutation")
+    public UmlStudentSolution saveStudentSolution(final UmlExerciseMutation mutation,
                                                     @Argument final UUID studentId,
-                                                    @Argument final String diagram) {
-        return umlExerciseService.submitSolution(mutation.getAssessmentId(), studentId, diagram);
+                                                    @Argument final String diagram,
+                                                    @Argument final UUID solutionId,
+                                                    @Argument final boolean submitted) {
+        return umlExerciseService.saveStudentSolution(
+                mutation.getAssessmentId(), studentId, diagram, solutionId, submitted);
     }
 
     @QueryMapping

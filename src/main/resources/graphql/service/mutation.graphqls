@@ -105,7 +105,15 @@ type UmlExerciseMutation {
     """
     updateTutorSolution(tutorSolution: String!): UmlExercise!
 
-    submitStudentSolution(studentId: UUID!, diagram: String!): UmlStudentSolution
+    """
+    Creates a new solution attempt for a student.
+    """
+    createUmlSolution(assessmentId: UUID!, studentId: UUID!, createFromPrevious: Boolean!): UmlStudentSolution!
+
+    """
+    Saves progress or finalizes a student's solution depending on the submit flag.
+    """
+    saveStudentSolution(studentId: UUID!, diagram: String!, solutionId: UUID, submit: Boolean!): UmlStudentSolution
 
     """
     Manually triggers the evaluation for the latest submitted solution of a student for a specific exercise.

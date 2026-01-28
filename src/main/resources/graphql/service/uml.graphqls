@@ -53,7 +53,7 @@ type UmlStudentSubmission {
 
 type UmlStudentSolution {
     id: UUID!
-    submittedAt: DateTime!
+    submittedAt: DateTime
     diagram: String!
     feedback: UmlFeedback
 }

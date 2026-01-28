@@ -14,7 +14,9 @@ import org.springframework.stereotype.Service;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import static de.unistuttgart.iste.meitrex.common.user_handling.UserCourseAccessValidator.validateUserHasAccessToCourse;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Nullable;
 import java.time.OffsetDateTime;
 import java.util.*;
 
@@ -30,6 +32,15 @@ public class UmlExerciseService {
 
 
     private final UmlEvaluationService evaluationService;
+    private static final String DEFAULT_START_DIAGRAM = """
+        classDiagram {
+            class("HelloWorld") {
+                public {
+                    hello : string
+                }
+            }
+        }
+    """;
 
     /**
      * Fetches the full UML exercise details by its assessment ID.
@@ -39,6 +50,19 @@ public class UmlExerciseService {
             .map(umlMapper::entityToDto)
             .orElseThrow(() -> new EntityNotFoundException("UmlExercise not found for assessmentId: " + assessmentId));
     }
+
+    /**
+     * Helper to find or initialize the submission container for a student.
+     */
+    private UmlStudentSubmissionEntity getOrCreateSubmission(UmlExerciseEntity exercise, UUID studentId) {
+        return submissionRepository
+            .findByStudentAndAssessmentWithSolutions(studentId, exercise.getId())
+            .orElseGet(() -> submissionRepository.save(UmlStudentSubmissionEntity.builder()
+                .studentId(studentId)
+                .exercise(exercise)
+                .solutions(new ArrayList<>())
+                .build()));
+}
 
     /**
      * Creates a new UML exercise after the assignment was created
@@ -88,51 +112,103 @@ public class UmlExerciseService {
     }
 
     /**
-     * Submits a new diagram as a student solution attempt.
+     * Creates a new unsubmitted solution for a student.
+     *
+     * @param assessmentId       The ID of the exercise.
+     * @param studentId          The ID of the student.
+     * @param createFromPrevious If true, copies the diagram from the most recent submission.
+     * @return The newly created solution DTO.
      */
-    public UmlStudentSolution submitSolution(final UUID assessmentId, final UUID studentId, final String diagram) {
-        log.info("SubmitSolution triggered: assessmentId={}, studentId={}", assessmentId, studentId);
+    @Transactional
+    public UmlStudentSolution createNewSolution(UUID assessmentId, UUID studentId, boolean createFromPrevious) {
+        UmlExerciseEntity exercise = exerciseRepository.findByAssessmentIdWithSubmissions(assessmentId)
+            .orElseThrow(() -> new NoSuchElementException("Exercise not found"));
+
+        UmlStudentSubmissionEntity submission = getOrCreateSubmission(exercise, studentId);
+
+        String diagram;
+        if (createFromPrevious) {
+            // Find the most recently submitted solution
+            diagram = submission.getSolutions().stream()
+                .filter(s -> s.getSubmittedAt() != null)
+                .max(Comparator.comparing(UmlStudentSolutionEntity::getSubmittedAt))
+                .map(UmlStudentSolutionEntity::getDiagram)
+                .orElseThrow(() -> new IllegalStateException(
+                    "Cannot create from previous: No submitted solutions found for this student."));
+        } else {
+            diagram = DEFAULT_START_DIAGRAM;
+        }
+
+        UmlStudentSolutionEntity newSolution = UmlStudentSolutionEntity.builder()
+            .submission(submission)
+            .diagram(diagram)
+            .submittedAt(null)
+            .build();
+
+        UmlStudentSolutionEntity saved = solutionRepository.save(newSolution);
+        submission.getSolutions().add(saved);
+
+        return umlMapper.solutionEntityToDto(saved);
+    }
+
+    /**
+     * Saves or submits a student's solution attempt.
+     * Updates an existing draft if a solutionId is provided or an unsubmitted solution exists.
+     * Creates a new solution record if no unsubmitted draft is found.
+     */
+    public UmlStudentSolution saveStudentSolution(final UUID assessmentId,
+                                                  final UUID studentId,
+                                                  final String diagram,
+                                                  @Nullable final UUID solutionId,
+                                                  final boolean submit) {
+        log.info("saveStudentSolution triggered: assessmentId={}, studentId={}, submit={}",
+                assessmentId, studentId, submit);
 
         UmlExerciseEntity exercise = exerciseRepository.findByAssessmentIdWithSubmissions(assessmentId)
             .orElseThrow(() -> new IllegalArgumentException("Exercise not found for assessmentId: " + assessmentId));
 
-        log.info("Found Exercise. Internal ID: {}, Assessment ID: {}", exercise.getId(), exercise.getAssessmentId());
+        UmlStudentSubmissionEntity submission = getOrCreateSubmission(exercise, studentId);
 
-        // Check for existing submission
-        Optional<UmlStudentSubmissionEntity> submissionOptional = submissionRepository
-            .findByStudentAndAssessmentWithSolutions(studentId, exercise.getId());
+        UmlStudentSolutionEntity solutionEntity;
 
-        UmlStudentSubmissionEntity submission;
+        if (solutionId != null) {
+            // If a specific solutionId is requested, verify it exists and is still a draft
+            solutionEntity = solutionRepository.findById(solutionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Solution not found for id: " + solutionId));
 
-        if (submissionOptional.isPresent()) {
-            submission = submissionOptional.get();
-            log.info("REUSING existing submission: id={}, studentId={}, solutionsCount={}",
-                    submission.getId(), submission.getStudentId(), submission.getSolutions().size());
+            if (solutionEntity.getSubmittedAt() != null) {
+                throw new IllegalStateException("Cannot modify a solution that has already been submitted.");
+            }
         } else {
-            log.info("NOT FOUND: No submission for studentId={} and exerciseId={}. Creating new entity.",
-                    studentId, exercise.getId());
-
-            submission = submissionRepository.save(UmlStudentSubmissionEntity.builder()
-                .studentId(studentId)
-                .exercise(exercise)
-                .solutions(new ArrayList<>())
-                .build());
-
-            log.info("CREATED new submission: id={}", submission.getId());
+            // Otherwise, look for an existing unsubmitted draft in the container
+            solutionEntity = submission.getSolutions().stream()
+                .filter(s -> s.getSubmittedAt() == null)
+                .findFirst()
+                .orElseGet(() -> {
+                    // No current draft exists; create a new solution record
+                    UmlStudentSolutionEntity newSolution = UmlStudentSolutionEntity.builder()
+                        .submission(submission)
+                        .diagram(diagram)
+                        .build();
+                    submission.getSolutions().add(newSolution);
+                    return newSolution;
+                });
         }
 
-        UmlStudentSolutionEntity solutionEntity = UmlStudentSolutionEntity.builder()
-            .submission(submission)
-            .diagram(diagram)
-            .submittedAt(OffsetDateTime.now())
-            .build();
+        solutionEntity.setDiagram(diagram);
 
-        submission.getSolutions().add(solutionEntity);
+        if (submit) {
+            solutionEntity.setSubmittedAt(OffsetDateTime.now());
+        }
+
         UmlStudentSolutionEntity savedEntity = solutionRepository.save(solutionEntity);
 
-        log.info("SAVED new solution: id={}, attached to submission: {}", savedEntity.getId(), submission.getId());
-
-        evaluationService.generateFeedbackAsync(savedEntity.getId(), diagram);
+        if (submit) {
+            evaluationService.generateFeedbackAsync(savedEntity.getId(), diagram);
+            log.info("Solution submitted and evaluation triggered for id: {}", savedEntity.getId());
+        } else {
+            log.info("Draft saved for solution id: {}", savedEntity.getId());
+        }
 
         return umlMapper.solutionEntityToDto(savedEntity);
     }
@@ -151,7 +227,7 @@ public class UmlExerciseService {
      * @throws NoSuchElementException If no exercise is found for the given identifier.
      */
     public List<UmlStudentSolution> getSolutionsByStudent(final UmlExercise exerciseDto, final UUID studentId) {
-        UmlExerciseEntity entity = exerciseRepository.findByAssessmentIdWithSubmissions(exerciseDto.getId())
+        UmlExerciseEntity entity = exerciseRepository.findByAssessmentIdWithSubmissions(exerciseDto.getAssessmentId())
             .orElseThrow(() -> new NoSuchElementException("Exercise not found"));
 
         return entity.getStudentSubmissions().stream()
