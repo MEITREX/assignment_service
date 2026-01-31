@@ -50,9 +50,9 @@ public class UmlExerciseController {
                                                     @Argument final UUID studentId,
                                                     @Argument final String diagram,
                                                     @Argument final UUID solutionId,
-                                                    @Argument final boolean submitted) {
+                                                    @Argument final boolean submit) {
         return umlExerciseService.saveStudentSolution(
-                mutation.getAssessmentId(), studentId, diagram, solutionId, submitted);
+                mutation.getAssessmentId(), studentId, diagram, solutionId, submit);
     }
 
     @QueryMapping
