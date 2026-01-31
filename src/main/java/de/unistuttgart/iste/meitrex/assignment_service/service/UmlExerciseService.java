@@ -90,11 +90,11 @@ public class UmlExerciseService {
     /**
      * Initializes a mutation object for a UML exercise and checks permissions.
      */
-    public UmlExerciseMutation mutateUmlExercise(final UUID assessmentId, final LoggedInUser currentUser) {
+    public UmlExerciseMutation  mutateUmlExercise(final UUID assessmentId, final LoggedInUser currentUser) {
         UmlExerciseEntity entity = exerciseRepository.findByAssessmentIdWithSubmissions(assessmentId)
             .orElseThrow(() -> new IllegalArgumentException("Exercise not found"));
 
-        validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.ADMINISTRATOR, entity.getCourseId());
+        validateUserHasAccessToCourse(currentUser, LoggedInUser.UserRoleInCourse.STUDENT, entity.getCourseId());
 
         return new UmlExerciseMutation(assessmentId);
     }
