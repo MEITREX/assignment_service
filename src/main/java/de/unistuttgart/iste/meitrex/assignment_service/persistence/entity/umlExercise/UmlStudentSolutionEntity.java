@@ -22,7 +22,7 @@ public class UmlStudentSolutionEntity implements IWithId<UUID> {
     @JoinColumn(name = "submission_id")
     private UmlStudentSubmissionEntity submission;
 
-    @Column(nullable = true)
+    @Column()
     private OffsetDateTime submittedAt;
 
     @Column(nullable = false, columnDefinition = "TEXT")

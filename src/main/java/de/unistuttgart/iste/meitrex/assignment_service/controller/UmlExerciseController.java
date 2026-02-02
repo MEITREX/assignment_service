@@ -72,11 +72,11 @@ public class UmlExerciseController {
             .orElse(null);
     }
 
-    @MutationMapping
+    @SchemaMapping(typeName = "UmlExerciseMutation")
     public UmlStudentSolution evaluateLatestSolution(
-            @Argument UUID assessmentId,
+            final UmlExerciseMutation mutation,
             @Argument UUID studentId,
             @Argument String semanticModel) {
-        return umlExerciseService.evaluateLatestSolution(assessmentId, studentId, semanticModel);
+        return umlExerciseService.evaluateLatestSolution(mutation.getAssessmentId(), studentId, semanticModel);
     }
 }

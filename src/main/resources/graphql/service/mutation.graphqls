@@ -118,7 +118,7 @@ type UmlExerciseMutation {
     """
     Manually triggers the evaluation for the latest submitted solution of a student for a specific exercise.
     """
-    evaluateLatestSolution(assessmentId: UUID!, studentId: UUID!): UmlStudentSolution!
+    evaluateLatestSolution(studentId: UUID!, semanticModel: String!): UmlStudentSolution!
 }
 
 input CreateAssignmentInput {
