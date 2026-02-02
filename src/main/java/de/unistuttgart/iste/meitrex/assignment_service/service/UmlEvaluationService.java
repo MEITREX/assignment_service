@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Slf4j
@@ -49,13 +50,16 @@ public class UmlEvaluationService {
     }
 
     @Transactional
-    public void generateFeedback(final UmlStudentSolutionEntity solution, final String semanticModel) {
+    public void generateFeedback(
+            final UmlStudentSolutionEntity solution, final String semanticModel, final int totalPoints) {
         String feedbackText = "Manual Test feedback text";
+
+        int randomPoints = ThreadLocalRandom.current().nextInt(totalPoints + 1);
 
         UmlFeedbackEntity feedback = UmlFeedbackEntity.builder()
             .solution(solution)
             .comment(feedbackText)
-            .points(8)
+            .points(randomPoints)
             .build();
 
         solution.setFeedback(feedback);
