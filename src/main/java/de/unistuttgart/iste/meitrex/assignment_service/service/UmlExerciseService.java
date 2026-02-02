@@ -126,6 +126,14 @@ public class UmlExerciseService {
 
         UmlStudentSubmissionEntity submission = getOrCreateSubmission(exercise, studentId);
 
+        boolean hasUnsubmitted = submission.getSolutions().stream()
+                .anyMatch(sol -> sol.getSubmittedAt() == null);
+
+        if (hasUnsubmitted) {
+            throw new IllegalStateException(
+                    "Cannot create a new attempt: An unsubmitted draft already exists for this student.");
+        }
+
         String diagram;
         if (createFromPrevious) {
             // Find the most recently submitted solution
@@ -204,7 +212,7 @@ public class UmlExerciseService {
         UmlStudentSolutionEntity savedEntity = solutionRepository.save(solutionEntity);
 
         if (submit) {
-            evaluationService.generateFeedbackAsync(savedEntity.getId(), diagram);
+            //evaluationService.generateFeedbackAsync(savedEntity.getId(), diagram);
             log.info("Solution submitted and evaluation triggered for id: {}", savedEntity.getId());
         } else {
             log.info("Draft saved for solution id: {}", savedEntity.getId());
@@ -226,19 +234,22 @@ public class UmlExerciseService {
      * has no submissions for this exercise.
      * @throws NoSuchElementException If no exercise is found for the given identifier.
      */
-    public List<UmlStudentSolution> getSolutionsByStudent(final UmlExercise exerciseDto, final UUID studentId) {
-        UmlExerciseEntity entity = exerciseRepository.findByAssessmentIdWithSubmissions(exerciseDto.getAssessmentId())
-            .orElseThrow(() -> new NoSuchElementException("Exercise not found"));
+     public List<UmlStudentSolution> getSolutionsByStudent(final UmlExercise exerciseDto, final UUID studentId) {
+         UmlExerciseEntity entity = exerciseRepository.findByAssessmentIdWithSubmissions(exerciseDto.getAssessmentId())
+                 .orElseThrow(() -> new NoSuchElementException("Exercise not found"));
 
-        return entity.getStudentSubmissions().stream()
-            .filter(sub -> sub.getStudentId().equals(studentId))
-            .findFirst()
-            .map(sub -> sub.getSolutions().stream()
-                .sorted(Comparator.comparing(UmlStudentSolutionEntity::getSubmittedAt).reversed())
-                .map(umlMapper::solutionEntityToDto)
-                .toList())
-            .orElse(Collections.emptyList());
-    }
+         return entity.getStudentSubmissions().stream()
+                 .filter(sub -> sub.getStudentId().equals(studentId))
+                 .findFirst()
+                 .map(sub -> sub.getSolutions().stream()
+                         .sorted(Comparator.comparing(
+                                 UmlStudentSolutionEntity::getSubmittedAt,
+                                 Comparator.nullsLast(Comparator.naturalOrder())
+                         ))
+                         .map(umlMapper::solutionEntityToDto)
+                         .toList())
+                 .orElse(Collections.emptyList());
+     }
 
      /**
      * Triggers a manual evaluation and feedback generation for a student's most recent solution attempt.
@@ -265,11 +276,18 @@ public class UmlExerciseService {
             .findFirst()
             .orElseThrow(() -> new IllegalStateException("No submission found for this student."));
 
+        boolean hasUnsubmitted = submission.getSolutions().stream()
+                .anyMatch(sol -> sol.getSubmittedAt() == null);
+
+        if (hasUnsubmitted) {
+            throw new IllegalStateException("Cannot evaluate: One or more solutions are not submitted.");
+        }
+
         UmlStudentSolutionEntity latestSolution = submission.getSolutions().stream()
             .max(Comparator.comparing(UmlStudentSolutionEntity::getSubmittedAt))
             .orElseThrow(() -> new IllegalStateException("Submission exists but contains no solutions."));
 
-        evaluationService.generateFeedback(latestSolution, semanticModel);
+        evaluationService.generateFeedback(latestSolution, semanticModel, exercise.getTotalPoints());
 
         return umlMapper.solutionEntityToDto(latestSolution);
     }
