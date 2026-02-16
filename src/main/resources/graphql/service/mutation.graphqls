@@ -103,7 +103,7 @@ type UmlExerciseMutation {
     """
     Creates a new UML exercise. Throws an error if the assignment does not exist.
     """
-    updateTutorSolution(tutorSolution: String!): UmlExercise!
+    updateTutorSolution(tutorSolution: UmlDiagramInput!): UmlExercise!
 
     """
     Creates a new solution attempt for a student.
@@ -113,12 +113,12 @@ type UmlExerciseMutation {
     """
     Saves progress or finalizes a student's solution depending on the submit flag.
     """
-    saveStudentSolution(studentId: UUID!, diagram: String!, solutionId: UUID, submit: Boolean!): UmlStudentSolution
+    saveStudentSolution(studentId: UUID!, diagram: UmlDiagramInput!, solutionId: UUID, submit: Boolean!): UmlStudentSolution
 
     """
     Manually triggers the evaluation for the latest submitted solution of a student for a specific exercise.
     """
-    evaluateLatestSolution(studentId: UUID!, semanticModel: String!): UmlStudentSolution!
+    evaluateLatestSolution(studentId: UUID!): UmlStudentSolution!
 }
 
 input CreateAssignmentInput {

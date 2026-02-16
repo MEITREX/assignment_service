@@ -1,6 +1,6 @@
 package de.unistuttgart.iste.meitrex.assignment_service.controller;
 
-import de.unistuttgart.iste.meitrex.assignment_service.service.UmlExerciseService;
+import de.unistuttgart.iste.meitrex.assignment_service.service.uml_assignment.UmlExerciseService;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ public class UmlExerciseController {
 
     @SchemaMapping(typeName = "UmlExerciseMutation")
     public UmlExercise updateTutorSolution(final UmlExerciseMutation mutation,
-                                           @Argument final String tutorSolution) {
+                                           @Argument final UmlDiagramInput tutorSolution) {
         return umlExerciseService.updateTutorSolution(mutation.getAssessmentId(), tutorSolution);
     }
 
@@ -47,12 +47,12 @@ public class UmlExerciseController {
 
     @SchemaMapping(typeName = "UmlExerciseMutation")
     public UmlStudentSolution saveStudentSolution(final UmlExerciseMutation mutation,
-                                                    @Argument final UUID studentId,
-                                                    @Argument final String diagram,
-                                                    @Argument final UUID solutionId,
-                                                    @Argument final Boolean submit) {
+                                                  @Argument final UUID studentId,
+                                                  @Argument final UmlDiagramInput diagram,
+                                                  @Argument final UUID solutionId,
+                                                  @Argument final Boolean submit) {
         return umlExerciseService.saveStudentSolution(
-                mutation.getAssessmentId(), studentId, diagram, solutionId, submit);
+                mutation.getAssessmentId(), studentId, diagram, solutionId, submit != null && submit);
     }
 
     @QueryMapping
@@ -75,8 +75,7 @@ public class UmlExerciseController {
     @SchemaMapping(typeName = "UmlExerciseMutation")
     public UmlStudentSolution evaluateLatestSolution(
             final UmlExerciseMutation mutation,
-            @Argument UUID studentId,
-            @Argument String semanticModel) {
-        return umlExerciseService.evaluateLatestSolution(mutation.getAssessmentId(), studentId, semanticModel);
+            @Argument UUID studentId) {
+        return umlExerciseService.evaluateLatestSolution(mutation.getAssessmentId(), studentId);
     }
 }

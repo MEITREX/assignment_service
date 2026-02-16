@@ -30,8 +30,8 @@ public class UmlExerciseEntity implements IWithId<UUID> {
     @Column(nullable = false)
     private boolean showSolution;
 
-    @Column(columnDefinition = "TEXT")
-    private String tutorSolution;
+    @Embedded
+    private UmlDiagram tutorSolution;
 
     @Column(nullable = false)
     private int totalPoints;

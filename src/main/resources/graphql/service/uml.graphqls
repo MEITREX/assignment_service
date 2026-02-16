@@ -20,7 +20,7 @@ type UmlExercise {
     HyLiMo code for the 'optimal' solution, created by the tutor.
     This gets used to evaluate against the submission of a student to create feedback
     """
-    tutorSolution: String!
+    tutorSolution: UmlDiagram
     """
     The total amount of points that can be achieved
     """
@@ -45,6 +45,11 @@ type UmlExercise {
     solutionsByStudent(studentId: UUID!): [UmlStudentSolution!]!
 }
 
+type UmlDiagram {
+    diagramCode: String!
+    semanticModel: String
+}
+
 type UmlStudentSubmission {
     id: UUID!
     studentId: UUID!
@@ -54,8 +59,13 @@ type UmlStudentSubmission {
 type UmlStudentSolution {
     id: UUID!
     submittedAt: DateTime
-    diagram: String!
+    diagram: UmlDiagram!
     feedback: UmlFeedback
+}
+
+input UmlDiagramInput {
+    diagramCode: String!
+    semanticModel: String
 }
 
 type UmlFeedback {
@@ -70,5 +80,5 @@ input CreateUmlExerciseInput {
     totalPoints: Int! @Positive
     requiredPercentage: Float! = 0.5 @Range(min : 0, max : 1)
     courseId: UUID!
-    tutorSolution: String
+    tutorSolution: UmlDiagramInput
 }

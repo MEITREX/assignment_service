@@ -25,8 +25,8 @@ public class UmlStudentSolutionEntity implements IWithId<UUID> {
     @Column()
     private OffsetDateTime submittedAt;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String diagram;
+    @Embedded
+    private UmlDiagram diagram;
 
     @OneToOne(mappedBy = "solution", cascade = CascadeType.ALL)
     private UmlFeedbackEntity feedback;
