@@ -112,6 +112,37 @@ public class UmlExerciseService {
     }
 
     /**
+     * Updates fields of a UML exercise.
+     */
+    public UmlExercise updateUmlExercise(final UUID assessmentId, final UpdateUmlExerciseInput input) {
+        UmlExerciseEntity entity = exerciseRepository.findByAssessmentIdWithSubmissions(assessmentId)
+            .orElseThrow(() -> new IllegalArgumentException("Exercise not found"));
+
+        if (input.getDescription() != null) {
+            entity.setDescription(input.getDescription());
+        }
+
+        if (input.getRequiredPercentage() != null) {
+            entity.setRequiredPercentage(input.getRequiredPercentage());
+        }
+
+        if (input.getShowSolution() != null) {
+            entity.setShowSolution(input.getShowSolution());
+        }
+
+        if (input.getTutorSolution() != null) {
+            entity.setTutorSolution(input.getTutorSolution());
+        }
+
+        if (input.getTotalPoints() != null) {
+            entity.setTotalPoints(input.getTotalPoints());
+        }
+
+        UmlExerciseEntity savedEntity = exerciseRepository.save(entity);
+        return umlMapper.entityToDto(savedEntity);
+    }
+
+    /**
      * Creates a new unsubmitted solution for a student.
      *
      * @param assessmentId       The ID of the exercise.

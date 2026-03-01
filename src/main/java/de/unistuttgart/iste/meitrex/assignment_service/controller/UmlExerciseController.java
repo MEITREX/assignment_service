@@ -38,6 +38,12 @@ public class UmlExerciseController {
     }
 
     @SchemaMapping(typeName = "UmlExerciseMutation")
+    public UmlExercise updateUmlExercise(final UmlExerciseMutation mutation,
+                                         @Argument final UpdateUmlExerciseInput input) {
+        return umlExerciseService.updateUmlExercise(mutation.getAssessmentId(), input);
+    }
+
+    @SchemaMapping(typeName = "UmlExerciseMutation")
     public UmlStudentSolution createUmlSolution(final UmlExerciseMutation mutation,
                                                 @Argument UUID studentId,
                                                 @Argument boolean createFromPrevious) {
