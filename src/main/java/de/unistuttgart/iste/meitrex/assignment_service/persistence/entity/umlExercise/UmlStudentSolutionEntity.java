@@ -22,11 +22,11 @@ public class UmlStudentSolutionEntity implements IWithId<UUID> {
     @JoinColumn(name = "submission_id")
     private UmlStudentSubmissionEntity submission;
 
-    @Column(nullable = false)
+    @Column()
     private OffsetDateTime submittedAt;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String diagram;
+    @Embedded
+    private UmlDiagram diagram;
 
     @OneToOne(mappedBy = "solution", cascade = CascadeType.ALL)
     private UmlFeedbackEntity feedback;
