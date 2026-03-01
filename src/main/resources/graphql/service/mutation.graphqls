@@ -138,9 +138,9 @@ input UpdateUmlExerciseInput {
     showSolution: Boolean
 
     """
-    HyLiMo code for the tutor solution.
+    Tutor solution diagram.
     """
-    tutorSolution: String
+    tutorSolution: UmlDiagramInput
 
     """
     Maximum points achievable in this UML exercise.

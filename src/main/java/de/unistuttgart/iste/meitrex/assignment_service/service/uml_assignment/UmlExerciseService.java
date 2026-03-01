@@ -130,7 +130,7 @@ public class UmlExerciseService {
         }
 
         if (input.getTutorSolution() != null) {
-            entity.setTutorSolution(input.getTutorSolution());
+            entity.setTutorSolution(umlMapper.inputToEntity(input.getTutorSolution()));
         }
 
         if (input.getTotalPoints() != null) {
