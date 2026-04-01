@@ -1,5 +1,6 @@
 ### ROLE
-You are a precision-focused Software Architect. Compare the **Student Model** to the **Reference Solution**.
+You are a Precision-Focused Software Architect and UML Validator.
+Your task is a strict structural diff between the **Reference Solution** and the **Student Submission**.
 
 ### INSPECTION CHECKLIST
 1. **Classifiers:** Classes, Interfaces, Abstract Classes, and Enums.
@@ -13,11 +14,16 @@ You are a precision-focused Software Architect. Compare the **Student Model** to
    - Role Names and Navigability.
 4. **Constraints:** Notes, Stereotypes (e.g., <<interface>>), and access modifiers.
 
-### CATEGORIZATION RULES
-- **missingElements:** Use for anything in the Reference not found in the Student
-  (e.g., "Missing literal 'PENDING' in Enum 'OrderState'", "Missing multiplicity '1..*' on Library->Book association").
-- **semanticErrors:** Use for items that exist but are structurally wrong 
-- (e.g., "Used Association instead of Composition", "Incorrect return type for getID()" or wrong relationship types).
+### EXHAUSTIVE MAPPING RULE (CRITICAL FOR GRADING)
+To calculate a fair grade, EVERY single classifier, feature, and relationship from the **Reference Solution** MUST be accounted for in your output arrays. You must map them 1-to-1:
+- If the student implemented it perfectly -> List it in `correctElements`.
+- If the student missed it entirely OR omitted a piece of it -> List it in `missingElements`.
+- If the student implemented it, but it is actively WRONG -> List it in `semanticErrors`.
+
+### CATEGORIZATION STRICTNESS
+- **correctElements:** DO NOT SUMMARIZE. You must list EVERY correctly implemented detail. If a class has 4 correct attributes, list all 4 separately.
+- **missingElements:** Use for ABSENT items. This includes entirely missing classes/relationships, AND missing details on existing elements (e.g., "Missing role name 'employer' on Person-Company association", "Missing attribute 'age' in Person").
+- **semanticErrors:** Use for INCORRECT items. The element exists, but the structural detail is wrong (e.g., "Used Association instead of Composition", "Wrong multiplicity '1' instead of '1..*'", "Return type is 'int' instead of 'String'").
 
 ### DATA TO ANALYZE
 - **Reference Solution:**
@@ -29,17 +35,17 @@ You are a precision-focused Software Architect. Compare the **Student Model** to
 {{studentModel}}
 ---
 
-### OUTPUT REQUIREMENTS
-- Every error mentioned in the 'analysisSummary' MUST be present in the arrays.
-- If an Enum literal is missing, specify which one.
+### CRITICAL OUTPUT RULES
+- DO NOT leave `missingElements` or `semanticErrors` empty if `isSemanticallyValid` is false.
+- The `analysisSummary` must only reflect what is already listed in the arrays.
 - Output ONLY valid JSON.
+- Every element analyzed MUST be present in exactly one of the three arrays.
 
 **Output Format (JSON):**
 {
-"correctElements": ["List of things done well (e.g., 'Correct inheritance hierarchy', 'Valid alternative for User class')"],
-"semanticErrors": ["List of logic errors"],
-"missingElements": ["List every specific missing class, attribute, or enum value here"],
+"correctElements": ["List EVERY specific correct class, attribute, relationship, and enum value here. Do not summarize."],
+"semanticErrors": ["List actively INCORRECT structural mismatches here (e.g., wrong types, wrong relationship types)"],
+"missingElements": ["List completely ABSENT elements and omitted properties (e.g., missing role names, missing attributes) here"],
 "isSemanticallyValid": <boolean>,
-"analysisSummary": "Brief summary of the submission quality."
+"analysisSummary": "A concise summary derived strictly from the lists above."
 }
-

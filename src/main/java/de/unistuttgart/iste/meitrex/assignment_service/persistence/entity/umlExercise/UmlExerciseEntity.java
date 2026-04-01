@@ -33,6 +33,9 @@ public class UmlExerciseEntity implements IWithId<UUID> {
     @Embedded
     private UmlDiagram tutorSolution;
 
+    @Column(columnDefinition = "TEXT")
+    private String gradingRules;
+
     @Column(nullable = false)
     private int totalPoints;
 

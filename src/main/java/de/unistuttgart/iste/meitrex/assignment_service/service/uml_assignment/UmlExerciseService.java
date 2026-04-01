@@ -73,6 +73,8 @@ public class UmlExerciseService {
                 ? umlMapper.inputToEntity(input.getTutorSolution())
                 : UmlDiagram.builder().diagramCode("").semanticModel("").build();
 
+        String gradingRules = input.getGradingRules() != null ? input.getGradingRules() : "";
+
         UmlExerciseEntity entity = UmlExerciseEntity.builder()
                 .assessmentId(assessmentId)
                 .courseId(courseId)
@@ -80,6 +82,7 @@ public class UmlExerciseService {
                 .showSolution(input.getShowSolution())
                 .totalPoints(input.getTotalPoints())
                 .requiredPercentage(input.getRequiredPercentage())
+                .gradingRules(gradingRules)
                 .tutorSolution(tutorSolution)
                 .studentSubmissions(new ArrayList<>())
                 .build();
@@ -301,8 +304,10 @@ public class UmlExerciseService {
          evaluationService.generateFeedback(
              latestSolution,
              exercise.getTutorSolution().getSemanticModel(),
-             "", // TODO: Add grading rules
-             exercise.getTotalPoints()
+             exercise.getGradingRules(),
+             exercise.getTotalPoints(),
+             exercise.getRequiredPercentage(),
+             exercise.isShowSolution()
          );
 
          return umlMapper.solutionEntityToDto(latestSolution);

@@ -2,7 +2,6 @@ package de.unistuttgart.iste.meitrex.assignment_service.service.uml_assignment;
 
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.umlExercise.UmlFeedbackEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.umlExercise.UmlStudentSolutionEntity;
-import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.UmlStudentSolutionRepository;
 import de.unistuttgart.iste.meitrex.common.ollama.OllamaClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +28,9 @@ public class UmlEvaluationService {
             final UmlStudentSolutionEntity solution,
             final String tutorModel,
             final String gradingRules,
-            final int totalPoints
+            final int totalPoints,
+            final double requiredPercentage,
+            final boolean showSolution
     ) {
         log.info("Starting automated feedback generation for solution ID: {}", solution.getId());
         final String studentModel = solution.getDiagram().getSemanticModel();
@@ -38,7 +39,8 @@ public class UmlEvaluationService {
         log.info("Analysis completed. Valid: {}, Summary: {}",
                 analysis.isSemanticallyValid(), analysis.analysisSummary());
 
-        UmlFeedbackResponse grading = performGrading(analysis, gradingRules, totalPoints);
+        UmlFeedbackResponse grading = performGrading(
+                analysis, gradingRules, totalPoints, requiredPercentage, showSolution);
 
         UmlFeedbackEntity feedbackEntity = UmlFeedbackEntity.builder()
             .solution(solution)
@@ -72,11 +74,19 @@ public class UmlEvaluationService {
         return response;
     }
 
-    private UmlFeedbackResponse performGrading(UmlAnalysisResponse analysis, String rules, int maxPoints) {
+    private UmlFeedbackResponse performGrading(
+            final UmlAnalysisResponse analysis,
+            final String rules,
+            final int maxPoints,
+            final double requiredPercentage,
+            final boolean showSolution
+    ) {
         String effectiveRules = (rules != null && !rules.isBlank()) ? rules : "Standard UML grading.";
 
         Map<String, String> args = Map.of(
                 "maxPoints", String.valueOf(maxPoints),
+                "passingThreshold", String.valueOf(requiredPercentage * maxPoints),
+                "showSolution", String.valueOf(showSolution),
                 "gradingRules", effectiveRules,
                 "isValid", String.valueOf(analysis.isSemanticallyValid()),
                 "correctElements", formatListForPrompt(analysis.correctElements()),
