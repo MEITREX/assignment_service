@@ -9,6 +9,8 @@ import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.Um
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.UmlStudentSolutionRepository;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.repository.UmlStudentSubmissionRepository;
 import jakarta.persistence.EntityNotFoundException;
+import de.unistuttgart.iste.meitrex.content_service.client.ContentServiceClient;
+import de.unistuttgart.iste.meitrex.content_service.exception.ContentServiceConnectionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class UmlExerciseService {
     private final UmlStudentSubmissionRepository submissionRepository;
     private final UmlStudentSolutionRepository solutionRepository;
     private final UmlExerciseMapper umlMapper;
+    private final ContentServiceClient contentServiceClient;
 
 
     private final UmlEvaluationService evaluationService;
@@ -166,6 +169,8 @@ public class UmlExerciseService {
             throw new IllegalStateException("An unsubmitted draft already exists.");
         }
 
+        ensureNewSolutionAllowed(exercise, submission, studentId);
+
         UmlDiagram diagram;
         if (createFromPrevious) {
             // Find the most recently submitted solution
@@ -213,18 +218,21 @@ public class UmlExerciseService {
                 throw new IllegalStateException("Solution already submitted.");
             }
         } else {
-            solutionEntity = submission.getSolutions().stream()
+            Optional<UmlStudentSolutionEntity> draftSolution = submission.getSolutions().stream()
                 .filter(s -> s.getSubmittedAt() == null)
-                .findFirst()
-                .orElseGet(() -> {
-                    UmlStudentSolutionEntity newSolution = UmlStudentSolutionEntity.builder()
-                        .submission(submission)
-                        // Initialize with provided diagram
-                        .diagram(umlMapper.inputToEntity(diagramInput))
-                        .build();
-                    submission.getSolutions().add(newSolution);
-                    return newSolution;
-                });
+                .findFirst();
+
+            if (draftSolution.isPresent()) {
+                solutionEntity = draftSolution.get();
+            } else {
+                ensureNewSolutionAllowed(exercise, submission, studentId);
+                solutionEntity = UmlStudentSolutionEntity.builder()
+                    .submission(submission)
+                    // Initialize with provided diagram
+                    .diagram(umlMapper.inputToEntity(diagramInput))
+                    .build();
+                submission.getSolutions().add(solutionEntity);
+            }
         }
 
         solutionEntity.setDiagram(umlMapper.inputToEntity(diagramInput));
@@ -312,4 +320,37 @@ public class UmlExerciseService {
 
          return umlMapper.solutionEntityToDto(latestSolution);
      }
+
+    private void ensureNewSolutionAllowed(final UmlExerciseEntity exercise,
+                                          final UmlStudentSubmissionEntity submission,
+                                          final UUID studentId) {
+        boolean hasSubmittedSolution = submission.getSolutions().stream()
+            .anyMatch(solution -> solution.getSubmittedAt() != null);
+
+        if (!hasSubmittedSolution) {
+            return;
+        }
+
+        if (!isAssessmentRepeatable(exercise.getAssessmentId(), studentId)) {
+            throw new IllegalStateException("This UML exercise is not repeatable. You cannot create another solution after submission.");
+        }
+    }
+
+    private boolean isAssessmentRepeatable(final UUID assessmentId, final UUID studentId) {
+        try {
+            Content content = contentServiceClient.queryContentsByIds(studentId, List.of(assessmentId)).stream()
+                .filter(candidate -> assessmentId.equals(candidate.getId()))
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Content with assessmentId %s not found".formatted(assessmentId)));
+
+            if (!(content instanceof Assessment assessmentContent)) {
+                throw new IllegalStateException("Content with assessmentId %s is not an assessment".formatted(assessmentId));
+            }
+
+            AssessmentMetadata metadata = assessmentContent.getAssessmentMetadata();
+            return metadata != null && metadata.getInitialLearningInterval() != null;
+        } catch (ContentServiceConnectionException e) {
+            throw new IllegalStateException("Could not determine repeatability for UML exercise.", e);
+        }
+    }
 }

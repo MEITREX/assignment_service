@@ -1,5 +1,6 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service.uml_assignment;
 
+import de.unistuttgart.iste.meitrex.assignment_service.exception.AiEvaluationException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.umlExercise.UmlFeedbackEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.umlExercise.UmlStudentSolutionEntity;
 import de.unistuttgart.iste.meitrex.common.ollama.OllamaClient;
@@ -51,7 +52,7 @@ public class UmlEvaluationService {
         solution.setFeedback(feedbackEntity);
     }
 
-    private UmlAnalysisResponse performAnalysis(String studentModel, String tutorModel) {
+    private UmlAnalysisResponse performAnalysis(String studentModel, String tutorModel) throws AiEvaluationException {
         Map<String, String> args = Map.of(
             "studentModel", studentModel,
             "tutorModel", tutorModel
@@ -68,6 +69,11 @@ public class UmlEvaluationService {
         UmlAnalysisResponse response = ollamaClient.startQuery(
                 UmlAnalysisResponse.class, TEMPLATE_ANALYSIS, args, fallback, null);
 
+        if ("Analysis failed.".equals(response.analysisSummary())) {
+            log.error("Ollama client returned the fallback response. Aborting evaluation.");
+            throw new AiEvaluationException("The AI model failed to analyze the UML diagram.");
+        }
+
         log.info("Detailed Analysis Findings:\n - Correct: {}\n - Errors: {}\n - Missing: {}",
                 response.correctElements(), response.semanticErrors(), response.missingElements());
 
@@ -80,7 +86,7 @@ public class UmlEvaluationService {
             final int maxPoints,
             final double requiredPercentage,
             final boolean showSolution
-    ) {
+    ) throws AiEvaluationException {
         String effectiveRules = (rules != null && !rules.isBlank()) ? rules : "Standard UML grading.";
 
         Map<String, String> args = Map.of(
@@ -99,7 +105,16 @@ public class UmlEvaluationService {
             0
         );
 
-        return ollamaClient.startQuery(UmlFeedbackResponse.class, TEMPLATE_GRADING, args, fallback, null);
+        UmlFeedbackResponse response = ollamaClient.startQuery(
+                UmlFeedbackResponse.class, TEMPLATE_GRADING, args, fallback, null);
+
+        // Intercept the fallback to prevent saving a 0-point grade
+        if ("Grading unavailable. Please review manually.".equals(response.feedbackText())) {
+            log.error("Ollama client returned the fallback response for grading. Aborting evaluation.");
+            throw new AiEvaluationException("The AI model successfully analyzed the diagram but failed to generate a final grade. Please try again.");
+        }
+
+        return response;
     }
 
     /**
