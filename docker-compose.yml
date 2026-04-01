@@ -15,8 +15,8 @@ services:
       - POSTGRES_CREATE_DB_ASSIGNMENT_SERVICE=assignment_service
   app-assignment:
     build:
-      context: ./../assignment_service/ # necessary because otherwise docker-compose overrides the context path when merging multiple docker-compose.yml files
-      dockerfile: Dockerfile
+      context: ./../..
+      dockerfile: backend/assignment_service/Dockerfile
     restart: unless-stopped
     container_name: assignment_service
     expose:
@@ -31,15 +31,21 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/assignment_service
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
   dapr-assignment:
     image: "daprio/daprd"
-    command: [
-      "./daprd",
-      "--app-id", "assignment_service",
-      "--app-port", "1101",
-      "--dapr-http-port", "1100",
-      "--resources-path", "./components"
-    ]
+    command:
+      [
+        "./daprd",
+        "--app-id",
+        "assignment_service",
+        "--app-port",
+        "1101",
+        "--dapr-http-port",
+        "1100",
+        "--resources-path",
+        "./components",
+      ]
     volumes:
       - "./../assignment_service/components/:/components" # Mount our components folder for the runtime to use. The mounted location must match the --resources-path argument.
     depends_on:
