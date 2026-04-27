@@ -15,8 +15,8 @@ services:
       - POSTGRES_CREATE_DB_ASSIGNMENT_SERVICE=assignment_service
   app-assignment:
     build:
-      context: ./../..
-      dockerfile: backend/assignment_service/Dockerfile
+      context: ./../assignment_service/ # necessary because otherwise docker-compose overrides the context path when merging multiple docker-compose.yml files
+      dockerfile: Dockerfile
     restart: unless-stopped
     container_name: assignment_service
     expose:
