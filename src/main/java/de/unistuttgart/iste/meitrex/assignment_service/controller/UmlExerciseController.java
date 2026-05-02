@@ -1,6 +1,8 @@
 package de.unistuttgart.iste.meitrex.assignment_service.controller;
 
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.umlExercise.UmlEvaluationJobStatus;
 import de.unistuttgart.iste.meitrex.assignment_service.service.uml_assignment.UmlExerciseService;
+import de.unistuttgart.iste.meitrex.assignment_service.service.uml_assignment.UmlEvaluationQueueService;
 import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
 import de.unistuttgart.iste.meitrex.generated.dto.*;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import java.util.UUID;
 public class UmlExerciseController {
 
     private final UmlExerciseService umlExerciseService;
+    private final UmlEvaluationQueueService umlEvaluationQueueService;
 
     @MutationMapping(name = "_internal_noauth_createUmlExercise")
     public UmlExercise createUmlExercise(@Argument final UUID courseId,
@@ -82,6 +85,14 @@ public class UmlExerciseController {
     public UmlStudentSolution evaluateLatestSolution(
             final UmlExerciseMutation mutation,
             @Argument UUID studentId) {
-        return umlExerciseService.evaluateLatestSolution(mutation.getAssessmentId(), studentId);
+        return umlExerciseService.enqueueLatestSolutionForEvaluation(mutation.getAssessmentId(), studentId);
+    }
+
+    @SchemaMapping(typeName = "UmlStudentSolution")
+    public UmlEvaluationJobStatus evaluationStatus(UmlStudentSolution solution) {
+        if (solution == null || solution.getId() == null) {
+            return null;
+        }
+        return umlEvaluationQueueService.getJobStatus(solution.getId());
     }
 }

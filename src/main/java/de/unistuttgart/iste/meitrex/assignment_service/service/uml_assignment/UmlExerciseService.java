@@ -33,9 +33,8 @@ public class UmlExerciseService {
     private final UmlStudentSolutionRepository solutionRepository;
     private final UmlExerciseMapper umlMapper;
     private final ContentServiceClient contentServiceClient;
-
-
     private final UmlEvaluationService evaluationService;
+    private final UmlEvaluationQueueService queueService;
     private static final String DEFAULT_START_DIAGRAM = """
         classDiagram {
             class("HelloWorld") {
@@ -242,6 +241,13 @@ public class UmlExerciseService {
         }
 
         UmlStudentSolutionEntity savedEntity = solutionRepository.save(solutionEntity);
+        
+        // If this is a submission, enqueue it for evaluation instead of evaluating synchronously
+        if (submit) {
+            queueService.createJob(savedEntity);
+            log.info("Evaluation job created for solution {}", savedEntity.getId());
+        }
+        
         return umlMapper.solutionEntityToDto(savedEntity);
     }
 
@@ -320,6 +326,36 @@ public class UmlExerciseService {
 
          return umlMapper.solutionEntityToDto(latestSolution);
      }
+
+    /**
+     * Enqueues the student's latest submitted solution for evaluation.
+     * Returns the solution DTO immediately.
+     */
+    @Transactional
+    public UmlStudentSolution enqueueLatestSolutionForEvaluation(final UUID assessmentId, final UUID studentId) {
+        UmlExerciseEntity exercise = exerciseRepository.findByAssessmentIdWithSubmissions(assessmentId)
+            .orElseThrow(() -> new NoSuchElementException("Exercise not found"));
+
+        UmlStudentSubmissionEntity submission = exercise.getStudentSubmissions().stream()
+            .filter(sub -> sub.getStudentId().equals(studentId))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("No submission found."));
+
+        UmlStudentSolutionEntity latestSolution = submission.getSolutions().stream()
+            .filter(sol -> sol.getSubmittedAt() != null)
+            .max(Comparator.comparing(UmlStudentSolutionEntity::getSubmittedAt))
+            .orElseThrow(() -> new IllegalStateException("No submitted solutions found."));
+
+        // Ensure tutor solution exists to prevent queueing invalid jobs
+        if (exercise.getTutorSolution() == null || exercise.getTutorSolution().getSemanticModel() == null) {
+            throw new IllegalStateException("Tutor solution is missing semantic model for evaluation.");
+        }
+
+        queueService.createJob(latestSolution);
+        log.info("Manual evaluation job created for solution {}", latestSolution.getId());
+
+        return umlMapper.solutionEntityToDto(latestSolution);
+    }
 
     private void ensureNewSolutionAllowed(final UmlExerciseEntity exercise,
                                           final UmlStudentSubmissionEntity submission,

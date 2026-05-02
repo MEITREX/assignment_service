@@ -64,7 +64,15 @@ type UmlStudentSolution {
     id: UUID!
     submittedAt: DateTime
     diagram: UmlDiagram!
+    evaluationStatus: UmlEvaluationStatus
     feedback: UmlFeedback
+}
+
+enum UmlEvaluationStatus {
+    ENQUEUED
+    PROCESSING
+    DONE
+    FAILED
 }
 
 input UmlDiagramInput {
