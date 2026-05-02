@@ -27,11 +27,12 @@ services:
       - "1101:1101"
     depends_on:
       - database
+    env_file:
+      - ./../assignment_service/.env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/assignment_service
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
-      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
   dapr-assignment:
     image: "daprio/daprd"
     command:
