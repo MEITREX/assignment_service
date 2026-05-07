@@ -1,6 +1,5 @@
 package de.unistuttgart.iste.meitrex.assignment_service.service.uml_assignment;
 
-import de.unistuttgart.iste.meitrex.assignment_service.controller.UmlTestController;
 import de.unistuttgart.iste.meitrex.assignment_service.exception.AiEvaluationException;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.umlExercise.UmlEvaluationJobEntity;
 import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.umlExercise.UmlFeedbackEntity;
@@ -159,94 +158,6 @@ public class UmlEvaluationService {
         }
 
         return response;
-    }
-
-    /**
-     * Executes the evaluation pipeline without saving to the database.
-     * Returns granular timings for benchmarking LLM configurations.
-     */
-    public UmlTestController.TestEvalResponse dryRunEvaluation(
-            final String studentModel,
-            final String tutorModel,
-            final String gradingRules,
-            final int maxPoints,
-            final double requiredPercentage,
-            final String analysisModelOverride,
-            final String gradingModelOverride,
-            final String promptMode,
-            final String taskDescription
-    ) {
-        long startTotal = System.currentTimeMillis();
-
-        // 1. Run Analysis with Timer
-        long startAnalysis = System.currentTimeMillis();
-        Map<String, String> analysisArgs = new HashMap<>();
-        analysisArgs.put("studentModel", studentModel);
-
-        UmlAnalysisResponse fallbackAnalysis = new UmlAnalysisResponse(
-                Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), false, "Analysis failed."
-        );
-
-        String prompt;
-        if ("TASK_BASED".equals(promptMode)) {
-            prompt = "analysis_task.md";
-            analysisArgs.put("taskDescription", taskDescription);
-            analysisArgs.put("tutorModel", tutorModel);
-        } else if ("PURE_TASK".equals(promptMode)) {
-            prompt = "uml_analysis_pure_task.md";
-            analysisArgs.put("taskDescription", taskDescription);
-        } else {
-            prompt = TEMPLATE_ANALYSIS;
-            analysisArgs.put("tutorModel", tutorModel);
-        }
-
-        UmlAnalysisResponse analysis = ollamaClient.startQuery(
-                UmlAnalysisResponse.class, prompt, analysisArgs, fallbackAnalysis, analysisModelOverride);
-
-        long endAnalysis = System.currentTimeMillis();
-        double analysisDuration = (endAnalysis - startAnalysis) / 1000.0;
-
-        if ("Analysis failed.".equals(analysis.analysisSummary())) {
-            throw new RuntimeException("Analysis LLM failed during dry run.");
-        }
-
-        // 2. Run Grading with Timer
-        long startGrading = System.currentTimeMillis();
-        String effectiveRules = (gradingRules != null && !gradingRules.isBlank()) ? gradingRules : "Standard UML grading.";
-        Map<String, String> gradingArgs = Map.of(
-                "maxPoints", String.valueOf(maxPoints),
-                "passingThreshold", String.valueOf(requiredPercentage * maxPoints),
-                "showSolution", "true",
-                "gradingRules", effectiveRules,
-                "isValid", String.valueOf(analysis.isSemanticallyValid()),
-                "correctElements", formatListForPrompt(analysis.correctElements()),
-                "semanticErrors", formatListForPrompt(analysis.semanticErrors()),
-                "missingElements", formatListForPrompt(analysis.missingElements())
-        );
-
-        UmlFeedbackResponse fallbackGrading = new UmlFeedbackResponse("Grading unavailable.", 0);
-
-        UmlFeedbackResponse grading = ollamaClient.startQuery(
-                UmlFeedbackResponse.class, TEMPLATE_GRADING, gradingArgs, fallbackGrading, gradingModelOverride);
-
-        long endGrading = System.currentTimeMillis();
-        double gradingDuration = (endGrading - startGrading) / 1000.0;
-
-        if ("Grading unavailable.".equals(grading.feedbackText())) {
-            throw new RuntimeException("Grading LLM failed during dry run.");
-        }
-
-        long endTotal = System.currentTimeMillis();
-        double totalDuration = (endTotal - startTotal) / 1000.0;
-
-        // Return the combined payload
-        return new UmlTestController.TestEvalResponse(
-                grading.points(),
-                grading.feedbackText(),
-                analysisDuration,
-                gradingDuration,
-                totalDuration
-        );
     }
 
     /**
