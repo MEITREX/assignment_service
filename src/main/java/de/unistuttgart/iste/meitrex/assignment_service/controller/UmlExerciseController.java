@@ -1,0 +1,98 @@
+package de.unistuttgart.iste.meitrex.assignment_service.controller;
+
+import de.unistuttgart.iste.meitrex.assignment_service.persistence.entity.umlExercise.UmlEvaluationJobStatus;
+import de.unistuttgart.iste.meitrex.assignment_service.service.uml_assignment.UmlExerciseService;
+import de.unistuttgart.iste.meitrex.assignment_service.service.uml_assignment.UmlEvaluationQueueService;
+import de.unistuttgart.iste.meitrex.common.user_handling.LoggedInUser;
+import de.unistuttgart.iste.meitrex.generated.dto.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.graphql.data.method.annotation.*;
+import org.springframework.stereotype.Controller;
+
+import java.util.List;
+import java.util.UUID;
+
+@Slf4j
+@Controller
+@RequiredArgsConstructor
+public class UmlExerciseController {
+
+    private final UmlExerciseService umlExerciseService;
+    private final UmlEvaluationQueueService umlEvaluationQueueService;
+
+    @MutationMapping(name = "_internal_noauth_createUmlExercise")
+    public UmlExercise createUmlExercise(@Argument final UUID courseId,
+                                         @Argument final UUID assessmentId,
+                                         @Argument final CreateUmlExerciseInput input) {
+        return umlExerciseService.createExercise(courseId, assessmentId, input);
+    }
+
+    @MutationMapping
+    public UmlExerciseMutation mutateUmlExercise(@Argument final UUID assessmentId,
+                                                 @ContextValue final LoggedInUser currentUser) {
+        return umlExerciseService.mutateUmlExercise(assessmentId, currentUser);
+    }
+
+    @SchemaMapping(typeName = "UmlExerciseMutation")
+    public UmlExercise updateTutorSolution(final UmlExerciseMutation mutation,
+                                           @Argument final UmlDiagramInput tutorSolution) {
+        return umlExerciseService.updateTutorSolution(mutation.getAssessmentId(), tutorSolution);
+    }
+
+    @SchemaMapping(typeName = "UmlExerciseMutation")
+    public UmlExercise updateUmlExercise(final UmlExerciseMutation mutation,
+                                         @Argument final UpdateUmlExerciseInput input) {
+        return umlExerciseService.updateUmlExercise(mutation.getAssessmentId(), input);
+    }
+
+    @SchemaMapping(typeName = "UmlExerciseMutation")
+    public UmlStudentSolution createUmlSolution(final UmlExerciseMutation mutation,
+                                                @Argument UUID studentId,
+                                                @Argument boolean createFromPrevious) {
+        log.info("Mutation: createUmlSolution for assessmentId={}, studentId={}", mutation.getAssessmentId(), studentId);
+        return umlExerciseService.createNewSolution(mutation.getAssessmentId(), studentId, createFromPrevious);
+    }
+
+    @SchemaMapping(typeName = "UmlExerciseMutation")
+    public UmlStudentSolution saveStudentSolution(final UmlExerciseMutation mutation,
+                                                  @Argument final UUID studentId,
+                                                  @Argument final UmlDiagramInput diagram,
+                                                  @Argument final UUID solutionId,
+                                                  @Argument final Boolean submit) {
+        return umlExerciseService.saveStudentSolution(
+                mutation.getAssessmentId(), studentId, diagram, solutionId, submit != null && submit);
+    }
+
+    @QueryMapping
+    public UmlExercise getUmlExerciseByAssessmentId(@Argument UUID assessmentId) {
+        return umlExerciseService.getExerciseByAssessmentId(assessmentId);
+    }
+
+    @SchemaMapping(typeName = "UmlExercise")
+    public List<UmlStudentSolution> solutionsByStudent(UmlExercise exercise, @Argument UUID studentId) {
+        return umlExerciseService.getSolutionsByStudent(exercise, studentId);
+    }
+
+    @SchemaMapping(typeName = "UmlExercise")
+    public UmlStudentSolution latestSolution(UmlExercise exercise, @Argument UUID studentId) {
+        return umlExerciseService.getSolutionsByStudent(exercise, studentId).stream()
+            .findFirst()
+            .orElse(null);
+    }
+
+    @SchemaMapping(typeName = "UmlExerciseMutation")
+    public UmlStudentSolution evaluateLatestSolution(
+            final UmlExerciseMutation mutation,
+            @Argument UUID studentId) {
+        return umlExerciseService.enqueueLatestSolutionForEvaluation(mutation.getAssessmentId(), studentId);
+    }
+
+    @SchemaMapping(typeName = "UmlStudentSolution")
+    public UmlEvaluationJobStatus evaluationStatus(UmlStudentSolution solution) {
+        if (solution == null || solution.getId() == null) {
+            return null;
+        }
+        return umlEvaluationQueueService.getJobStatus(solution.getId());
+    }
+}

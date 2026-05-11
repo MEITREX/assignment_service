@@ -27,19 +27,26 @@ services:
       - "1101:1101"
     depends_on:
       - database
+    env_file:
+      - ./../assignment_service/.env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/assignment_service
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
   dapr-assignment:
     image: "daprio/daprd"
-    command: [
-      "./daprd",
-      "--app-id", "assignment_service",
-      "--app-port", "1101",
-      "--dapr-http-port", "1100",
-      "--resources-path", "./components"
-    ]
+    command:
+      [
+        "./daprd",
+        "--app-id",
+        "assignment_service",
+        "--app-port",
+        "1101",
+        "--dapr-http-port",
+        "1100",
+        "--resources-path",
+        "./components",
+      ]
     volumes:
       - "./../assignment_service/components/:/components" # Mount our components folder for the runtime to use. The mounted location must match the --resources-path argument.
     depends_on:

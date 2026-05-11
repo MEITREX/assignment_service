@@ -37,3 +37,8 @@ out/
 .vscode/
 
 node_modules/
+
+# Local environment secrets
+.env
+.env.local
+.env.*.local

@@ -14,6 +14,7 @@ It handles assignment creation, grading, and publishing grading results. Externa
 | spring.datasource.url      | PostgreSQL database URL            | jdbc:postgresql://localhost:1132/assignment_service | jdbc:postgresql://assignment-service-db-postgresql:5432/assignment-service |
 | spring.datasource.username | Database usernam                   | root                                                | gits                                                                       |
 | spring.datasource.password | Database password                  | root                                                | *secret*                                                                   |
+| OLLAMA_API_KEY            | API key for LLM requests (ollama.apiKey) | set via local .env file                             | set via deployment secret/env var                                          |
 | DAPR_HTTP_PORT             | Dapr HTTP Port*                    | 1100                                                | 3500                                                                       |
 | server.port                | Port on which the application runs | 1101                                                | 1101                                                                       |
 | course_service.url         | URL for course service GraphQL     | http://localhost:2001/graphql                       | http://localhost:3500/v1.0/invoke/course-service/method/graphql            |
@@ -35,6 +36,21 @@ It handles assignment creation, grading, and publishing grading results. Externa
 | spring.jpa.hibernate.ddl-auto           | Hibernate DDL auto strategy               | create                                  | update                                  |
 | logging.level.root                      | Logging level for root logger             | DEBUG                                   | -                                       |
 | DAPR_GRPC_PORT                          | Dapr gRPC Port                            | -                                       | 50001                                   |
+
+## Local secrets with .env
+
+For local development, keep secrets in a root-level `.env` file. The application imports this file via Spring configuration.
+
+1. Create `.env` in the repository root.
+2. Add your key:
+
+```properties
+OLLAMA_API_KEY=your_real_key_here
+```
+
+3. Do not commit `.env` (already ignored via `.gitignore`).
+
+Use `.env.example` as the template for required keys.
 
 ## API description
 
